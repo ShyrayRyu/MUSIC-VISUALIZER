@@ -8,7 +8,7 @@ let win, media;
 if (process.platform === 'linux') app.commandLine.appendSwitch('no-sandbox');
 
 function startMedia() {
-  const send = (m) => { if (win && !win.isDestroyed()) win.webContents.send('media', m); };
+  const send = (m) => { if (process.env.MV_DEBUG) console.log('[media]', JSON.stringify(m).slice(0, 160)); if (win && !win.isDestroyed()) win.webContents.send('media', m); };
   if (process.platform === 'win32') media = require('./media-win')(send);
   else if (process.platform === 'linux') media = require('./media-linux')(send);
   else send({ type: 'error', code: 'unsupported' });
@@ -71,6 +71,7 @@ function createWindow() {
     webPreferences: { preload: path.join(__dirname, 'preload.js'), backgroundThrottling: false }
   });
   win.setMenuBarVisibility(false);
+  if (process.env.MV_DEBUG) win.webContents.on('console-message', (_e, lvl, msg, line, src) => console.log('[renderer]', msg, src + ':' + line));
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
 }
 

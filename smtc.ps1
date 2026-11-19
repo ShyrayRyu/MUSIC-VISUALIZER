@@ -20,16 +20,19 @@ $propT = [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionMediaPr
 $strT  = [Windows.Storage.Streams.IRandomAccessStreamWithContentType]
 $mgr = Await ($mgrT::RequestAsync()) $mgrT
 
-$readTask = [Console]::In.ReadLineAsync()
+$sr = New-Object System.IO.StreamReader([Console]::OpenStandardInput(), [System.Text.Encoding]::UTF8)
+$readTask = $sr.ReadLineAsync()
 $lastKey = ''; $coverSent = $false; $coverTries = 0; $wasActive = $null
 
 while ($true) {
   $s = $mgr.GetCurrentSession()
+  foreach ($c in $mgr.GetSessions()) { if ($c.GetPlaybackInfo().PlaybackStatus.ToString() -eq 'Playing') { $s = $c; break } }
 
   # ---- commandes
   if ($readTask.IsCompleted) {
     $cmd = $readTask.Result
-    $readTask = [Console]::In.ReadLineAsync()
+    $sr = New-Object System.IO.StreamReader([Console]::OpenStandardInput(), [System.Text.Encoding]::UTF8)
+$readTask = $sr.ReadLineAsync()
     if ($s -and $cmd) {
       switch -regex ($cmd) {
         '^toggle$' { [void]$s.TryTogglePlayPauseAsync() }
