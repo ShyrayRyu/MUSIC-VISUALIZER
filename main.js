@@ -1,12 +1,15 @@
 const { app, BrowserWindow, ipcMain, desktopCapturer, session, dialog } = require('electron');
 const path = require('path');
-const http = require('http');
 
 let win, media;
 
 // Linux : l'AppArmor d'Ubuntu 24.04+ bloque le sandbox Chromium d'Electron installé via npm.
 // L'appli ne charge que des fichiers locaux, on le désactive donc sur Linux.
-if (process.platform === 'linux') app.commandLine.appendSwitch('no-sandbox');
+if (process.platform === 'linux') {
+  app.commandLine.appendSwitch('no-sandbox');
+  app.commandLine.appendSwitch('enable-gpu-rasterization');
+  app.commandLine.appendSwitch('enable-zero-copy');
+}
 
 function startMedia() {
   const send = (m) => { if (process.env.MV_DEBUG) console.log('[media]', JSON.stringify(m).slice(0, 160)); if (win && !win.isDestroyed()) win.webContents.send('media', m); };
@@ -56,63 +59,52 @@ ipcMain.handle('lyrics', async (_e, { title, artist, album, duration }) => {
 });
 
 
-// ---------- Clip YouTube (recherche + lecteur embarqué) ----------
-const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
-const secs = (s = '') => s.split(':').reduce((a, v) => a * 60 + (+v || 0), 0);
+// ---------- Visuels : clip officiel (Apple Music / iTunes) + photo artiste (Deezer) ----------
+// Pas de YouTube : l'API iTunes fournit les aperçus vidéo OFFICIELS des clips (H.264 1080p, ~30 s, sans pub,
+// sans restriction d'intégration). Mise en correspondance stricte artiste + titre pour éviter les faux clips.
+const norm = (s = '') => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, ' ').trim();
+const BAD_VIDEO = /interview|making of|behind the scenes|trailer|documentary|documentaire|freestyle|reaction|lyrics?\b|visuali[sz]er|teaser/;
+const visualsCache = new Map();
 
-ipcMain.handle('ytsearch', async (_e, { title, artist, duration }) => {
-  try {
-    const a = cleanArtist(artist), t = clean(title);
-    const r = await fetch('https://www.youtube.com/results?search_query=' + encodeURIComponent(`${a} ${t} clip officiel`) + '&sp=EgIQAQ%253D%253D',
-      { headers: { 'User-Agent': BROWSER_UA, 'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8' } });
-    const m = (await r.text()).match(/var ytInitialData = (\{.*?\});<\/script>/s);
-    if (!m) return [];
-    const vids = [];
-    (function walk(o) {
-      if (!o || typeof o !== 'object') return;
-      if (o.videoRenderer && o.videoRenderer.videoId) {
-        const v = o.videoRenderer;
-        vids.push({ id: v.videoId, title: (v.title.runs || []).map((x) => x.text).join(''), len: secs(v.lengthText && v.lengthText.simpleText), owner: (v.ownerText && v.ownerText.runs || []).map((x) => x.text).join('') });
-      }
-      for (const k in o) walk(o[k]);
-    })(JSON.parse(m[1]));
-    const dur = (duration || 0) / 1000, norm = (s) => s.toLowerCase();
-    const score = (v) => {
-      const T = norm(v.title); let s = 0;
-      if (T.includes(norm(t))) s += 4;
-      if (norm(v.owner).includes(norm(firstArtist(a))) || T.includes(norm(firstArtist(a)))) s += 3;
-      if (/official|officiel|clip|video|vidéo|mv/.test(T)) s += 2;
-      if (/lyric|paroles|audio|live|reaction|réaction|cover|remix|instrumental|karaoke|slowed|sped|nightcore|8d/.test(T)) s -= 5;
-      if (dur && v.len) { const d = Math.abs(v.len - dur) / dur; s += d < .1 ? 3 : d < .3 ? 0 : -4; }
-      return s;
-    };
-    return vids.slice(0, 12).map((v, i) => ({ id: v.id, s: score(v) - i * .1 })).sort((x, y) => y.s - x.s).slice(0, 5).map((x) => x.id);
-  } catch { return []; }
-});
+async function findAppleClip(title, artist, durMs) {
+  const A = firstArtist(cleanArtist(artist)), T = clean(title), nt = norm(T), na = norm(A);
+  if (!nt || !na) return null;
+  let best = null;
+  for (const country of ['fr', 'us']) {
+    const res = await j('https://itunes.apple.com/search?' + new URLSearchParams({ term: `${A} ${T}`, media: 'musicVideo', entity: 'musicVideo', limit: '25', country }));
+    for (const r of (res && res.results) || []) {
+      if (!r.previewUrl) continue;
+      const rt = norm(clean(r.trackName)), ra = norm(r.artistName);
+      if (!(ra.includes(na) || na.includes(ra.split(' and ')[0]))) continue;          // bon artiste
+      if (rt !== nt && !rt.startsWith(nt + ' ') && !nt.startsWith(rt + ' ')) continue; // bon titre
+      if (BAD_VIDEO.test(norm(r.trackName)) && !BAD_VIDEO.test(nt)) continue;
+      let sc = rt === nt ? 5 : 2;
+      if (durMs && r.trackTimeMillis) { const d = Math.abs(r.trackTimeMillis - durMs) / durMs; sc += d < .06 ? 4 : d < .2 ? 1 : -6; }
+      if (!best || sc > best.sc) best = { sc, url: r.previewUrl };
+    }
+    if (best && best.sc >= 5) break;
+  }
+  return best && best.sc > 0 ? best.url : null;
+}
 
-// Petit serveur local : sert la page du lecteur YouTube (le lecteur exige une vraie origine http)
-const PLAYER_HTML = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
-html,body{margin:0;height:100%;overflow:hidden;background:#000}
-#p{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:max(100vw,177.78vh);height:max(56.25vw,100vh);pointer-events:none}
-</style></head><body><div id="p"></div><script>
-const q=new URLSearchParams(location.search);let pl,ready=false,want={t:0,playing:true};
-const up=(m)=>parent.postMessage(m,'*');
-function onYouTubeIframeAPIReady(){pl=new YT.Player('p',{videoId:q.get('v'),playerVars:{autoplay:1,controls:0,mute:1,rel:0,disablekb:1,fs:0,playsinline:1,modestbranding:1,iv_load_policy:3,start:+q.get('start')||0,origin:location.origin},
- events:{onReady:e=>{e.target.mute();e.target.playVideo();ready=true;up({type:'yt-ready'})},
-  onStateChange:e=>{if(e.data===1)up({type:'yt-playing'})},
-  onError:e=>up({type:'yt-error',code:e.data})}})}
-addEventListener('message',e=>{if(!ready||!e.data||e.data.type!=='sync')return;want=e.data;
- const cur=pl.getCurrentTime();if(Math.abs(cur-want.t)>2.5&&want.t>=0)pl.seekTo(want.t,true);
- const st=pl.getPlayerState();if(want.playing&&st!==1&&st!==3)pl.playVideo();else if(!want.playing&&st===1)pl.pauseVideo()});
-const s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';document.head.appendChild(s);
-</script></body></html>`;
-let ytPort = 0;
-const ytServer = http.createServer((req, res) => {
-  if (req.url.startsWith('/player.html')) { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); res.end(PLAYER_HTML); }
-  else { res.writeHead(404); res.end(); }
+async function findDeezerArt(title, artist) {
+  const A = firstArtist(cleanArtist(artist)), T = clean(title);
+  const res = await j('https://api.deezer.com/search?limit=10&q=' + encodeURIComponent(`${A} ${T}`));
+  const na = norm(A), nt = norm(T);
+  const list = ((res && res.data) || []).filter((x) => x.artist && norm(x.artist.name).includes(na));
+  const hit = list.find((x) => norm(x.title) === nt) || list[0];
+  if (!hit) return null;
+  return { artist: hit.artist.picture_xl || hit.artist.picture_big || '', cover: (hit.album && (hit.album.cover_xl || hit.album.cover_big)) || '' };
+}
+
+ipcMain.handle('visuals', async (_e, { key, title, artist, duration }) => {
+  if (visualsCache.has(key)) return visualsCache.get(key);
+  const [clip, art] = await Promise.all([findAppleClip(title, artist, duration).catch(() => null), findDeezerArt(title, artist).catch(() => null)]);
+  const out = { clip, artist: art && art.artist, cover: art && art.cover };
+  visualsCache.set(key, out);
+  if (visualsCache.size > 200) visualsCache.delete(visualsCache.keys().next().value);
+  return out;
 });
-const ytReady = new Promise((ok) => ytServer.listen(0, '127.0.0.1', () => { ytPort = ytServer.address().port; ok(ytPort); }));
-ipcMain.handle('ytport', () => ytReady);
 ipcMain.on('cmd', (_e, c) => { if (media) media.send(c); });
 ipcMain.on('fullscreen', () => win.setFullScreen(!win.isFullScreen()));
 ipcMain.on('ontop', (_e, v) => win.setAlwaysOnTop(!!v));
@@ -137,10 +129,15 @@ function createWindow() {
 app.whenReady().then(() => {
   // Capture du son système (loopback) pour le visualiseur, sans fenêtre de sélection
   session.defaultSession.setDisplayMediaRequestHandler((_req, cb) => {
-    desktopCapturer.getSources({ types: ['screen'] }).then((s) => cb({ video: s[0], audio: 'loopback' })).catch(() => cb({}));
+    desktopCapturer.getSources({ types: ['screen'] })
+      .then((s) => {
+        if (s && s[0]) cb({ video: s[0], audio: 'loopback' });
+        else cb({});
+      })
+      .catch(() => cb({}));
   });
   createWindow();
   startMedia();
 });
 
-app.on('window-all-closed', () => { ytServer.close(); if (media) media.stop(); app.quit(); });
+app.on('window-all-closed', () => { if (media) media.stop(); app.quit(); });
