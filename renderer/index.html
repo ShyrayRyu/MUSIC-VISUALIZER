@@ -2,18 +2,22 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: file: blob:; media-src 'self' file: blob:; frame-src http://127.0.0.1:*; style-src 'self' 'unsafe-inline'; script-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: file: blob: https://*.dzcdn.net https://*.mzstatic.com; media-src 'self' file: blob: https://*.itunes.apple.com https://*.mzstatic.com; style-src 'self' 'unsafe-inline'; script-src 'self'">
 <title>Music Visualizer</title>
+<link rel="stylesheet" href="fonts.css">
 <link rel="stylesheet" href="style.css">
 </head>
 <body class="mode-visualizer">
   <div id="bg">
     <div id="bg-aurora"><i></i><i></i><i></i></div>
     <div id="bg-cover"></div>
-    <iframe id="bg-yt" allow="autoplay; encrypted-media" referrerpolicy="origin" tabindex="-1"></iframe>
+    <div id="bg-artist"></div>
+    <video id="bg-clip" muted loop playsinline></video>
     <video id="bg-video" muted loop autoplay playsinline></video>
     <img id="bg-image" alt="">
     <div id="bg-dim"></div>
+    <div id="bg-scrim"></div>
+    <div id="bg-grain"></div>
   </div>
   <div id="halo"></div>
 
@@ -30,6 +34,53 @@
     <section id="lyrics-view">
       <div id="lyrics-mask"><div id="lyrics"></div></div>
       <div id="lyrics-status"></div>
+      <div id="np"><div id="np-cover-wrap"><img id="np-cover" alt=""></div><div id="np-title"></div><div id="np-artist"></div><div id="np-badge"></div></div>
+    </section>
+    <section id="vinyl-view">
+      <aside id="vinyl-rails-left" class="vinyl-rail">
+        <div class="rail-header"><span class="rail-indicator"></span><span id="rail-left-label">PRÉCÉDENTS</span></div>
+        <div id="rail-left-list" class="rail-list"></div>
+      </aside>
+
+      <div id="vinyl-stage">
+        <div id="vinyl-platter-glow"></div>
+        <div id="vinyl-deck">
+          <div id="vinyl-sleeve">
+            <img id="v-sleeve-img" alt="">
+            <div class="sleeve-sheen"></div>
+            <div class="sleeve-cut"></div>
+            <div class="sleeve-badge">33⅓ RPM</div>
+          </div>
+          <div id="vinyl-disc">
+            <div class="vinyl-grooves"></div>
+            <div class="vinyl-sheen"></div>
+            <div class="vinyl-label">
+              <img id="v-label-img" alt="">
+              <div class="vinyl-center-hole"></div>
+            </div>
+          </div>
+          <div id="vinyl-arm">
+            <div class="arm-base"></div>
+            <div class="arm-pivot"></div>
+            <div class="arm-rod"></div>
+            <div class="arm-head"></div>
+          </div>
+        </div>
+
+        <div id="vinyl-meta">
+          <div id="v-title"></div>
+          <div id="v-artist"></div>
+          <div class="vinyl-tags">
+            <span class="v-tag">STEREO HI-FI</span>
+            <span id="v-neon-badge" class="v-tag neon-pill">ANALOG MASTER</span>
+          </div>
+        </div>
+      </div>
+
+      <aside id="vinyl-rails-right" class="vinyl-rail">
+        <div class="rail-header"><span class="rail-indicator"></span><span id="rail-right-label">FILE D'ATTENTE</span></div>
+        <div id="rail-right-list" class="rail-list"></div>
+      </aside>
     </section>
   </main>
 
@@ -38,15 +89,15 @@
   <div id="controls">
     <img id="c-cover" alt="">
     <div id="c-info"><b id="c-title"></b><span id="c-artist"></span></div>
-    <button id="b-prev" title="Précédent">⏮</button>
-    <button id="b-play" title="Lecture / Pause">⏯</button>
-    <button id="b-next" title="Suivant">⏭</button>
+    <button id="b-prev" title="Précédent"><svg viewBox="0 0 24 24"><path d="M6 5h2v14H6zM20 5v14L9.5 12z"/></svg></button>
+    <button id="b-play" title="Lecture / Pause"><svg class="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l13-7.5z"/></svg><svg class="i-pause" viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg></button>
+    <button id="b-next" title="Suivant"><svg viewBox="0 0 24 24"><path d="M16 5h2v14h-2zM4 5v14l10.5-7z"/></svg></button>
     <span id="c-time">0:00</span>
     <div id="bar"><div id="bar-fill"></div></div>
     <span id="c-dur">0:00</span>
-    <button id="b-mode" title="Changer de mode (M)">◐</button>
-    <button id="b-fs" title="Plein écran (F11)">⛶</button>
-    <button id="b-set" title="Réglages (S)">⚙</button>
+    <button id="b-mode" title="Changer de mode (M)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8" stroke-dasharray="2 3.2"/></svg></button>
+    <button id="b-fs" title="Plein écran (F11)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+    <button id="b-set" title="Réglages (S)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg></button>
   </div>
 
   <div id="wizard"><div id="wz-box"></div></div>
