@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: file: blob:; media-src 'self' file: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: file: blob:; media-src 'self' file: blob:; frame-src http://127.0.0.1:*; style-src 'self' 'unsafe-inline'; script-src 'self'">
 <title>Music Visualizer</title>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -10,6 +10,7 @@
   <div id="bg">
     <div id="bg-aurora"><i></i><i></i><i></i></div>
     <div id="bg-cover"></div>
+    <iframe id="bg-yt" allow="autoplay; encrypted-media" referrerpolicy="origin" tabindex="-1"></iframe>
     <video id="bg-video" muted loop autoplay playsinline></video>
     <img id="bg-image" alt="">
     <div id="bg-dim"></div>

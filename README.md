@@ -10,7 +10,7 @@ Application **Windows 10/11 et Linux (Ubuntu)** qui affiche la musique en cours 
 
 - **Paroles synchronisées** (via [LRCLIB](https://lrclib.net)), mot par mot, en grand
 - **Visualiseur circulaire** réactif au son autour de la pochette ronde
-- Couleurs automatiques tirées de la pochette, halo lumineux, horloge, fond flouté / aurore / clip perso
+- Couleurs automatiques tirées de la pochette, halo lumineux, horloge, fond : pochette floutée / aurore / **clip YouTube trouvé automatiquement** / fichier perso
 - Pochettes des derniers morceaux sur le côté, barre de contrôle (précédent / pause / suivant / seek)
 - **Deux modes** : visualiseur circulaire **ou** paroles + clip en fond
 - **Français / Anglais** au choix, assistant de démarrage et réglages complets (tout s'active / se désactive)
@@ -51,6 +51,7 @@ Ou double-clique sur `Lancer.bat` (Windows) / lance `./Lancer.sh` (Linux) : les 
 - **Paroles** : récupérées sur LRCLIB ; la synchro est par ligne, le remplissage mot par mot est estimé.
 
 ### Limites connues
+- **Clip YouTube** : l'app cherche le clip du morceau sur YouTube et le joue en fond (sans son, synchronisé avec la musique ; ajuste « Décalage du clip » si besoin). Internet requis. Certains clips ne sont pas intégrables : l'app essaie alors le résultat suivant, sinon garde la pochette floutée. Des publicités YouTube peuvent parfois apparaître.
 - La file d'attente à venir n'est pas exposée par Windows : les pochettes latérales montrent l'**historique** des morceaux écoutés.
 - Si le visualiseur ne suit pas le son, la capture audio a échoué : il bascule sur une animation simulée.
 - Si les paroles sont décalées, ajuste « Décalage synchro » dans les réglages.
@@ -69,7 +70,7 @@ Ou double-clique sur `Lancer.bat` (Windows) / lance `./Lancer.sh` (Linux) : les 
 
 - **Synced lyrics** (via [LRCLIB](https://lrclib.net)), word by word, large
 - **Sound-reactive circular visualizer** around a round album cover
-- Auto colors from the cover, glowing halo, clock, blurred / aurora / custom clip background
+- Auto colors from the cover, glowing halo, clock, background: blurred cover / aurora / **YouTube clip found automatically** / custom file
 - Side covers of recent tracks, control bar (previous / pause / next / seek)
 - **Two modes**: circular visualizer **or** lyrics + clip background
 - **French / English**, startup wizard and full settings (every feature can be toggled)
@@ -110,6 +111,7 @@ Or double-click `Lancer.bat` (Windows) / run `./Lancer.sh` (Linux): dependencies
 - **Lyrics**: fetched from LRCLIB; sync is per line, word-by-word fill is estimated.
 
 ### Known limitations
+- **YouTube clip**: the app searches YouTube for the track's music video and plays it muted in the background, synced to your music (tweak "Clip offset" if needed). Internet required. Some videos can't be embedded: the app then tries the next result, or keeps the blurred cover. YouTube ads may occasionally show up.
 - Windows doesn't expose the upcoming queue, so side covers show your listening **history**.
 - If the visualizer doesn't follow the sound, audio capture failed and it falls back to a simulated animation.
 - If lyrics are off, tweak "Sync offset" in settings.

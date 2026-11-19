@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain, desktopCapturer, session, dialog } = require('electron');
 const path = require('path');
+const http = require('http');
 
 let win, media;
 
@@ -54,6 +55,64 @@ ipcMain.handle('lyrics', async (_e, { title, artist, album, duration }) => {
   return r;
 });
 
+
+// ---------- Clip YouTube (recherche + lecteur embarqué) ----------
+const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
+const secs = (s = '') => s.split(':').reduce((a, v) => a * 60 + (+v || 0), 0);
+
+ipcMain.handle('ytsearch', async (_e, { title, artist, duration }) => {
+  try {
+    const a = cleanArtist(artist), t = clean(title);
+    const r = await fetch('https://www.youtube.com/results?search_query=' + encodeURIComponent(`${a} ${t} clip officiel`) + '&sp=EgIQAQ%253D%253D',
+      { headers: { 'User-Agent': BROWSER_UA, 'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8' } });
+    const m = (await r.text()).match(/var ytInitialData = (\{.*?\});<\/script>/s);
+    if (!m) return [];
+    const vids = [];
+    (function walk(o) {
+      if (!o || typeof o !== 'object') return;
+      if (o.videoRenderer && o.videoRenderer.videoId) {
+        const v = o.videoRenderer;
+        vids.push({ id: v.videoId, title: (v.title.runs || []).map((x) => x.text).join(''), len: secs(v.lengthText && v.lengthText.simpleText), owner: (v.ownerText && v.ownerText.runs || []).map((x) => x.text).join('') });
+      }
+      for (const k in o) walk(o[k]);
+    })(JSON.parse(m[1]));
+    const dur = (duration || 0) / 1000, norm = (s) => s.toLowerCase();
+    const score = (v) => {
+      const T = norm(v.title); let s = 0;
+      if (T.includes(norm(t))) s += 4;
+      if (norm(v.owner).includes(norm(firstArtist(a))) || T.includes(norm(firstArtist(a)))) s += 3;
+      if (/official|officiel|clip|video|vidéo|mv/.test(T)) s += 2;
+      if (/lyric|paroles|audio|live|reaction|réaction|cover|remix|instrumental|karaoke|slowed|sped|nightcore|8d/.test(T)) s -= 5;
+      if (dur && v.len) { const d = Math.abs(v.len - dur) / dur; s += d < .1 ? 3 : d < .3 ? 0 : -4; }
+      return s;
+    };
+    return vids.slice(0, 12).map((v, i) => ({ id: v.id, s: score(v) - i * .1 })).sort((x, y) => y.s - x.s).slice(0, 5).map((x) => x.id);
+  } catch { return []; }
+});
+
+// Petit serveur local : sert la page du lecteur YouTube (le lecteur exige une vraie origine http)
+const PLAYER_HTML = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+html,body{margin:0;height:100%;overflow:hidden;background:#000}
+#p{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:max(100vw,177.78vh);height:max(56.25vw,100vh);pointer-events:none}
+</style></head><body><div id="p"></div><script>
+const q=new URLSearchParams(location.search);let pl,ready=false,want={t:0,playing:true};
+const up=(m)=>parent.postMessage(m,'*');
+function onYouTubeIframeAPIReady(){pl=new YT.Player('p',{videoId:q.get('v'),playerVars:{autoplay:1,controls:0,mute:1,rel:0,disablekb:1,fs:0,playsinline:1,modestbranding:1,iv_load_policy:3,start:+q.get('start')||0,origin:location.origin},
+ events:{onReady:e=>{e.target.mute();e.target.playVideo();ready=true;up({type:'yt-ready'})},
+  onStateChange:e=>{if(e.data===1)up({type:'yt-playing'})},
+  onError:e=>up({type:'yt-error',code:e.data})}})}
+addEventListener('message',e=>{if(!ready||!e.data||e.data.type!=='sync')return;want=e.data;
+ const cur=pl.getCurrentTime();if(Math.abs(cur-want.t)>2.5&&want.t>=0)pl.seekTo(want.t,true);
+ const st=pl.getPlayerState();if(want.playing&&st!==1&&st!==3)pl.playVideo();else if(!want.playing&&st===1)pl.pauseVideo()});
+const s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';document.head.appendChild(s);
+</script></body></html>`;
+let ytPort = 0;
+const ytServer = http.createServer((req, res) => {
+  if (req.url.startsWith('/player.html')) { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); res.end(PLAYER_HTML); }
+  else { res.writeHead(404); res.end(); }
+});
+const ytReady = new Promise((ok) => ytServer.listen(0, '127.0.0.1', () => { ytPort = ytServer.address().port; ok(ytPort); }));
+ipcMain.handle('ytport', () => ytReady);
 ipcMain.on('cmd', (_e, c) => { if (media) media.send(c); });
 ipcMain.on('fullscreen', () => win.setFullScreen(!win.isFullScreen()));
 ipcMain.on('ontop', (_e, v) => win.setAlwaysOnTop(!!v));
@@ -84,4 +143,4 @@ app.whenReady().then(() => {
   startMedia();
 });
 
-app.on('window-all-closed', () => { if (media) media.stop(); app.quit(); });
+app.on('window-all-closed', () => { ytServer.close(); if (media) media.stop(); app.quit(); });

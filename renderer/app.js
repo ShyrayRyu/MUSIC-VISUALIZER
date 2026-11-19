@@ -8,7 +8,7 @@ const DEFAULTS = {
   // affichage
   halo: true, clock: true, queue: true, controls: true, autoHide: true,
   // fond
-  bgMode: 'cover', bgFile: '', bgBlur: 40, bgDim: 55,
+  bgMode: 'cover', clipDelay: 0, bgFile: '', bgBlur: 40, bgDim: 55,
   // couleurs
   accentAuto: true, accent1: '#ff5ea8', accent2: '#ffb347', glow: 100,
   // visualiseur
@@ -28,7 +28,8 @@ const SCHEMA = [
     ['askAtStart', 'toggle', 'Assistant au démarrage'], ['wizard', 'action', 'Ouvrir l\'assistant de configuration'],
     ['controls', 'toggle', 'Barre de contrôle'], ['autoHide', 'toggle', 'Masquer l\'interface au repos'], ['onTop', 'toggle', 'Toujours au premier plan']]],
   ['Fond / clip', [
-    ['bgMode', 'select', 'Type de fond', { cover: 'Pochette floutée', aurora: 'Aurore animée', custom: 'Mon clip / image', black: 'Noir' }],
+    ['bgMode', 'select', 'Type de fond', { cover: 'Pochette floutée', youtube: 'Clip YouTube (auto)', aurora: 'Aurore animée', custom: 'Mon fichier (vidéo / image)', black: 'Noir' }],
+    ['clipDelay', 'range', 'Décalage du clip (s)', [-30, 30, 1]],
     ['bgFile', 'file', 'Fichier (vidéo, gif, image)'], ['bgBlur', 'range', 'Flou', [0, 100, 1]], ['bgDim', 'range', 'Assombrissement', [0, 95, 1]]]],
   ['Couleurs', [
     ['accentAuto', 'toggle', 'Couleurs auto (pochette)'], ['accent1', 'color', 'Couleur 1'], ['accent2', 'color', 'Couleur 2'], ['glow', 'range', 'Intensité lumineuse', [0, 200, 5]]]],
@@ -71,7 +72,7 @@ const EN = {
   "← Retour": "← Back", "Commencer": "Start", "Ne plus me demander au démarrage": "Don't ask me again at startup",
   "Lance une musique": "Play some music", "YouTube Music, Deezer, Spotify… dans ton navigateur ou ton app.<br>Elle apparaîtra ici automatiquement.": "YouTube Music, Deezer, Spotify… in your browser or app.<br>It will show up here automatically.",
   "Raccourcis : <b>M</b> mode · <b>S</b> réglages · <b>F11</b> plein écran · <b>Espace</b> pause · <b>←/→</b> piste préc./suiv.": "Shortcuts: <b>M</b> mode · <b>S</b> settings · <b>F11</b> fullscreen · <b>Space</b> pause · <b>←/→</b> prev/next track",
-  "Linux : installe playerctl →  sudo apt install playerctl": "Linux: install playerctl →  sudo apt install playerctl", "Système non supporté": "Unsupported system", "Précédent": "Previous", "Lecture / Pause": "Play / Pause", "Suivant": "Next", "Changer de mode (M)": "Switch mode (M)", "Plein écran (F11)": "Fullscreen (F11)", "Réglages (S)": "Settings (S)"
+  "Linux : installe playerctl →  sudo apt install playerctl": "Linux: install playerctl →  sudo apt install playerctl", "Système non supporté": "Unsupported system", "Clip YouTube (auto)": "YouTube clip (auto)", "Mon fichier (vidéo / image)": "My file (video / image)", "Mon fichier (vidéo / image)…": "My file (video / image)…", "Décalage du clip (s)": "Clip offset (s)", "Précédent": "Previous", "Lecture / Pause": "Play / Pause", "Suivant": "Next", "Changer de mode (M)": "Switch mode (M)", "Plein écran (F11)": "Fullscreen (F11)", "Réglages (S)": "Settings (S)"
 };
 const tr = (s) => (S.lang === 'en' && EN[s]) || s;
 function applyStatic() {
@@ -105,6 +106,7 @@ function applySettings() {
     }
   }
   body.dataset.bg = bg;
+  if (S.bgMode === 'youtube') ensureClip(); else if (clipKey) stopClip();
   if (typeof applyColors === 'function') applyColors();
   layout();
   api.onTop(S.onTop);
@@ -179,6 +181,7 @@ function newTrack(m) {
   history = history.slice(-12);
   renderQueue();
   loadLyrics(m);
+  if (S.bgMode === 'youtube') ensureClip();
 }
 
 /* ----- pochette & couleurs ----- */
@@ -237,6 +240,34 @@ function renderQueue() {
     q.appendChild(d);
   });
 }
+
+/* =================== CLIP YOUTUBE =================== */
+let clipKey = '', clipIds = [], clipIdx = 0, ytPort = 0;
+const ytFrame = $('bg-yt');
+async function ensureClip() {
+  if (!track || clipKey === track.key) return;
+  clipKey = track.key; clipIds = []; clipIdx = 0;
+  ytFrame.src = 'about:blank';
+  const key = clipKey;
+  if (!ytPort) ytPort = await api.ytPort();
+  const ids = await api.ytSearch({ title: track.title, artist: track.artist, duration: track.dur });
+  if (clipKey !== key || S.bgMode !== 'youtube') return;
+  clipIds = ids; playClip();
+}
+function playClip() {
+  if (clipIdx >= clipIds.length) { ytFrame.src = 'about:blank'; return; } // aucun clip lisible : on garde la pochette floutée
+  const start = Math.max(0, Math.floor((pos() - S.offset) / 1000 + S.clipDelay));
+  ytFrame.src = `http://127.0.0.1:${ytPort}/player.html?v=${clipIds[clipIdx]}&start=${start}`;
+}
+function stopClip() { clipKey = ''; ytFrame.src = 'about:blank'; }
+addEventListener('message', (e) => {
+  if (e.source !== ytFrame.contentWindow || !e.data) return;
+  if (e.data.type === 'yt-error') { clipIdx++; playClip(); } // clip non intégrable : on essaie le suivant
+});
+setInterval(() => {
+  if (S.bgMode === 'youtube' && clipKey && ytPort && ytFrame.src.startsWith('http'))
+    ytFrame.contentWindow.postMessage({ type: 'sync', t: Math.max(0, (pos() - S.offset) / 1000 + S.clipDelay), playing }, '*');
+}, 1000);
 
 /* =================== PAROLES =================== */
 let lineEls = [], words = [], curIdx = -2;
@@ -474,7 +505,7 @@ function wizStep(n) {
      ['lyrics', '🎤', 'Paroles + clip', 'Paroles synchronisées en grand, mot par mot, avec un clip ou une image en fond.']].forEach(([k, ic, t, d]) => {
       const c = document.createElement('div'); c.className = 'wz-card' + (S.mode === k ? ' sel' : '');
       c.innerHTML = `<div class="ic">${ic}</div><h3>${tr(t)}</h3><p>${tr(d)}</p>`;
-      c.onclick = () => { S.mode = k; wizStep(2); };
+      c.onclick = () => { S.mode = k; if (k === 'lyrics' && S.bgMode === 'cover') S.bgMode = 'youtube'; wizStep(2); };
       cards.appendChild(c);
     });
     const a = h('div', 'wz-actions'); const sk = document.createElement('button'); sk.className = 'wz-btn ghost'; sk.textContent = tr('Passer (garder mes réglages)'); sk.onclick = closeWizard; a.appendChild(sk);
@@ -491,7 +522,7 @@ function wizStep(n) {
     });
     const r = document.createElement('div'); r.className = 'row'; r.innerHTML = '<label>' + tr('Fond') + '</label>';
     const sel = document.createElement('select');
-    for (const [k, t] of Object.entries({ cover: 'Pochette floutée', aurora: 'Aurore animée', custom: 'Mon clip / image…', black: 'Noir' })) { const o = document.createElement('option'); o.value = k; o.textContent = tr(t); sel.appendChild(o); }
+    for (const [k, t] of Object.entries({ cover: 'Pochette floutée', youtube: 'Clip YouTube (auto)', aurora: 'Aurore animée', custom: 'Mon fichier (vidéo / image)…', black: 'Noir' })) { const o = document.createElement('option'); o.value = k; o.textContent = tr(t); sel.appendChild(o); }
     sel.value = S.bgMode;
     sel.onchange = async () => { S.bgMode = sel.value; if (sel.value === 'custom') { const p = await api.pickFile(); if (p) S.bgFile = p; else { S.bgMode = 'cover'; sel.value = 'cover'; } } };
     r.appendChild(sel); grid.appendChild(r);
