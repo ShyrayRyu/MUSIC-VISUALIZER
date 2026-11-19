@@ -1,7 +1,7 @@
 @property --rot { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
 :root {
   --c1: #ff5ea8; --c2: #ffb347;
-  --lyrics-size: 56px; --font: 'Segoe UI Variable Display', 'Segoe UI', sans-serif;
+  --lyrics-size: 56px; --font: 'Outfit', system-ui, sans-serif;
   --bg-blur: 40px; --bg-dim: .55; --glow: 1;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -18,14 +18,13 @@ body.idle { cursor: none; }
 #bg-aurora i:nth-child(2) { background: var(--c2); right: -25vmax; bottom: -25vmax; animation-duration: 31s; }
 #bg-aurora i:nth-child(3) { background: color-mix(in srgb, var(--c1), var(--c2)); left: 25vw; top: 20vh; width: 40vmax; height: 40vmax; animation-duration: 38s; opacity: .35; }
 @keyframes drift { to { transform: translate(18vw, 14vh) scale(1.25); } }
-body[data-bg="cover"] #bg-cover, body[data-bg="youtube"] #bg-cover, body[data-bg="aurora"] #bg-aurora { display: block; }
-#bg-yt { width: 100%; height: 100%; border: 0; pointer-events: none; }
-body[data-bg="youtube"] #bg-yt { display: block; }
+body[data-bg="cover"] #bg-cover, body[data-bg="clip"] #bg-cover, body[data-bg="aurora"] #bg-aurora { display: block; }
+body[data-bg="clip"] #bg-artist, body[data-bg="clip"] #bg-clip { display: block; }
 body[data-bg="custom-video"] #bg-video, body[data-bg="custom-image"] #bg-image { display: block; }
 #bg-dim { display: block !important; background: rgba(0,0,0,var(--bg-dim)); }
 
 /* ---------- Halo lumineux sur les bords ---------- */
-#halo { position: fixed; inset: 0; z-index: 1; pointer-events: none; padding: 10px;
+#halo { position: fixed; inset: 0; z-index: 1; pointer-events: none; padding: 3px;
   background: conic-gradient(from var(--rot), var(--c1), var(--c2), var(--c1), var(--c2), var(--c1));
   -webkit-mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
   mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
@@ -49,7 +48,24 @@ body.no-queue #queue { display: none; }
 /* ---------- Scène ---------- */
 #stage { position: fixed; inset: 0; z-index: 2; }
 #stage section { position: absolute; inset: 0; display: none; }
-body.mode-visualizer #viz, body.mode-lyrics #lyrics-view { display: block; }
+body.mode-visualizer #viz { display: block; }
+body.mode-lyrics #viz, body.mode-lyrics #lyrics-view { display: block; }
+body.mode-lyrics #cover-wrap, body.mode-lyrics #meta { display: none; }
+body.mode-vinyl #vinyl-view { display: flex; }
+body.mode-vinyl #queue { display: none; }
+#stage { pointer-events: none; }
+#stage::before {
+  content: ''; position: absolute; left: -10vw; top: -10vh; width: 45vw; height: 45vh; border-radius: 50%;
+  background: radial-gradient(circle, var(--c1) 0%, transparent 70%);
+  opacity: .18; filter: blur(90px); pointer-events: none; z-index: 0;
+  transition: background .8s ease;
+}
+#stage::after {
+  content: ''; position: absolute; right: -10vw; bottom: 5vh; width: 45vw; height: 45vh; border-radius: 50%;
+  background: radial-gradient(circle, var(--c2) 0%, transparent 70%);
+  opacity: .2; filter: blur(90px); pointer-events: none; z-index: 0;
+  transition: background .8s ease;
+}
 #canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 #cover-wrap { position: absolute; left: 50%; top: 46%; border-radius: 50%; transform: translate(-50%, -50%);
   box-shadow: 0 0 60px color-mix(in srgb, var(--c1) 70%, transparent), 0 0 0 4px #ffffff22; overflow: hidden; background: linear-gradient(135deg, var(--c1), var(--c2)); }
@@ -65,7 +81,7 @@ body.no-cover #cover-wrap { visibility: hidden; }
 body:not(.viz-caption) #m-caption { display: none; }
 
 /* ---------- Paroles ---------- */
-#lyrics-mask { position: absolute; left: 140px; right: 140px; top: 0; bottom: 110px; overflow: hidden;
+#lyrics-mask { position: absolute; left: 150px; right: 34vw; top: 0; bottom: 110px; overflow: hidden;
   -webkit-mask-image: linear-gradient(transparent, #000 18%, #000 82%, transparent); mask-image: linear-gradient(transparent, #000 18%, #000 82%, transparent); }
 #lyrics { position: absolute; left: 0; right: 0; top: 0; transition: transform .6s cubic-bezier(.22,.9,.3,1); will-change: transform; }
 .ln { font-size: var(--lyrics-size); font-weight: 800; line-height: 1.15; padding: 14px 0; opacity: .25; transform: scale(.82); transform-origin: left center; transition: opacity .5s, transform .5s, filter .5s; letter-spacing: -.5px; }
@@ -142,3 +158,253 @@ body.wizard-open #wizard { display: flex; }
 .wz-btn { padding: 13px 34px; border-radius: 30px; border: 0; font-size: 16px; font-weight: 600; cursor: pointer; color: #fff; background: linear-gradient(90deg, var(--c1), var(--c2)); }
 .wz-btn.ghost { background: #ffffff14; font-weight: 400; }
 .wz-ask { font-size: 13px; opacity: .65; display: flex; gap: 8px; align-items: center; margin-top: 18px; justify-content: center; }
+
+/* =====================================================================
+   DESIGN V2 : cinéma, verre dépoli, typographie Outfit
+   ===================================================================== */
+/* ---------- Fond : clip officiel / photo artiste / pochette ---------- */
+#bg-artist { background-size: cover; background-position: center 28%; opacity: 0; transition: opacity 1.4s ease; animation: kenburns 46s ease-in-out infinite alternate; filter: saturate(1.15) contrast(1.05); }
+body.has-artist #bg-artist { opacity: 1; }
+@keyframes kenburns { from { transform: scale(1.04) translate(0, 0); } to { transform: scale(1.17) translate(-2%, -1.5%); } }
+#bg-clip { width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 1.2s ease; filter: saturate(1.1) contrast(1.05); }
+body.has-clip #bg-clip { opacity: 1; }
+/* voile de lisibilité : sombre à gauche (paroles), ouvert à droite ; vignette douce ; bas assombri pour les contrôles */
+#bg-scrim { display: block !important; pointer-events: none;
+  background: linear-gradient(90deg, rgba(5,5,11,.82) 0%, rgba(5,5,11,.5) 42%, rgba(5,5,11,.12) 100%),
+              linear-gradient(0deg, rgba(5,5,11,.75) 0%, transparent 32%),
+              radial-gradient(ellipse at 50% 45%, transparent 45%, rgba(0,0,0,.55) 100%); }
+body.mode-visualizer #bg-scrim { background: radial-gradient(ellipse at 50% 46%, rgba(0,0,0,.1) 0%, rgba(0,0,0,.62) 100%), linear-gradient(0deg, rgba(5,5,11,.6), transparent 30%); }
+#bg-grain { display: block !important; pointer-events: none; opacity: .07; mix-blend-mode: overlay; background-size: 160px 160px; }
+
+/* ---------- Paroles ---------- */
+.ln { font-size: min(var(--lyrics-size), 5.4vw); font-weight: 800; line-height: 1.1; letter-spacing: -.025em; padding: 11px 0; opacity: .3; transform: scale(.9); }
+.ln.active { opacity: 1; text-shadow: none; filter: drop-shadow(0 6px 34px color-mix(in srgb, var(--c1) 50%, transparent)); }
+body.word-fill .ln.active .w { background: linear-gradient(90deg, #fff calc(var(--p, 0) * 100%), rgba(255,255,255,.32) calc(var(--p, 0) * 100%)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+body.word-fill.approx .ln.active .w { background: none; color: #fff; }
+.ln .w { margin-right: .24em; }
+#lyrics-status { left: 150px; bottom: 118px; font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; opacity: .55; padding: 5px 12px; border-radius: 20px; background: #ffffff12; backdrop-filter: blur(10px); }
+#lyrics-status:empty { display: none; }
+
+/* ---------- Carte « en lecture » (mode paroles) ---------- */
+#np { position: absolute; right: 5vw; top: 46%; transform: translateY(-50%); width: min(24vw, 380px); display: none; }
+body.mode-lyrics #np { display: block; }
+#np-cover-wrap { width: 100%; aspect-ratio: 1; border-radius: 24px; overflow: hidden; background: linear-gradient(135deg, var(--c1), var(--c2)); transition: transform .12s ease-out; will-change: transform;
+  border: 1px solid #ffffff26; box-shadow: 0 34px 90px rgba(0,0,0,.65), 0 0 90px color-mix(in srgb, var(--c1) 38%, transparent); }
+#np-cover { width: 100%; height: 100%; object-fit: cover; display: block; }
+#np-title { margin-top: 24px; font-size: clamp(20px, 1.9vw, 30px); font-weight: 800; letter-spacing: -.015em; line-height: 1.12; text-shadow: 0 2px 20px #0008; }
+#np-artist { margin-top: 5px; font-size: clamp(14px, 1.2vw, 19px); font-weight: 400; opacity: .72; }
+#np-badge { margin-top: 14px; display: inline-block; padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; letter-spacing: 1.4px; text-transform: uppercase; background: #ffffff14; border: 1px solid #ffffff1f; backdrop-filter: blur(10px); }
+#np-badge:empty { display: none; }
+#np-badge::before { content: ''; display: inline-block; width: 7px; height: 7px; margin-right: 8px; border-radius: 50%; background: var(--c1); box-shadow: 0 0 10px var(--c1); }
+
+/* ---------- Titre du mode visualiseur ---------- */
+#m-title { font-weight: 800; letter-spacing: -.01em; text-shadow: 0 4px 40px color-mix(in srgb, var(--c1) 70%, transparent); }
+#m-artist { font-weight: 300; letter-spacing: 5px; opacity: .7; }
+#cover-wrap { box-shadow: 0 0 0 1px #ffffff30, 0 0 0 7px #ffffff0d, 0 20px 70px #000a; }
+
+/* ---------- Horloge, file latérale ---------- */
+#clock { font-weight: 200; letter-spacing: 3px; }
+#queue .q { border: 1px solid #ffffff22; }
+
+/* ---------- Barre de contrôle en verre ---------- */
+#controls { background: rgba(18,18,26,.5); backdrop-filter: blur(30px) saturate(1.7); border: 1px solid #ffffff1c; box-shadow: 0 20px 60px #0009, inset 0 1px 0 #ffffff14; }
+#controls button svg { width: 20px; height: 20px; display: block; margin: auto; }
+#controls button svg:not([fill]) { fill: currentColor; }
+#controls button { color: #ffffffd0; display: grid; place-items: center; }
+#controls button:hover { color: #fff; background: #ffffff1c; }
+#controls #b-play { width: 44px; height: 44px; color: #12121a; background: linear-gradient(135deg, var(--c1), var(--c2)); box-shadow: 0 6px 24px color-mix(in srgb, var(--c1) 55%, transparent); }
+#controls #b-play:hover { color: #12121a; background: linear-gradient(135deg, var(--c1), var(--c2)); transform: scale(1.08); }
+#b-play .i-pause { display: none; }
+body:not(.paused) #b-play .i-play { display: none; }
+body:not(.paused) #b-play .i-pause { display: block; }
+#bar { height: 5px; } #bar-fill { box-shadow: 0 0 12px var(--c1); }
+
+/* =====================================================================
+   MODE VINYLE : Platine 33 tours & file d'attente latérale
+   ===================================================================== */
+#vinyl-view {
+  position: absolute; inset: 0; display: none;
+  align-items: center; justify-content: space-between;
+  padding: 30px 45px 100px; z-index: 4; pointer-events: auto;
+}
+body.mode-vinyl #vinyl-view { display: flex; }
+
+/* ---------- Rails latéraux (file d'attente à gauche et à droite) ---------- */
+.vinyl-rail {
+  width: 260px; max-height: 74vh; display: flex; flex-direction: column; gap: 12px; z-index: 6;
+  pointer-events: auto;
+}
+.rail-header {
+  font-size: 11px; font-weight: 800; letter-spacing: 2.2px; text-transform: uppercase;
+  display: flex; align-items: center; gap: 8px; color: var(--c1); margin-bottom: 4px;
+}
+#vinyl-rails-right .rail-header { color: var(--c2); }
+.rail-indicator {
+  width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor;
+}
+.rail-list {
+  display: flex; flex-direction: column; gap: 10px; overflow-y: auto; overflow-x: hidden;
+  padding-right: 6px; scrollbar-width: none;
+}
+.rail-list::-webkit-scrollbar { display: none; }
+.rail-empty {
+  font-size: 13px; opacity: .45; font-style: italic; padding: 12px 0;
+}
+.rail-card {
+  background: rgba(18, 18, 26, 0.62); backdrop-filter: blur(25px) saturate(1.4);
+  border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; padding: 10px 12px;
+  display: flex; align-items: center; gap: 12px; cursor: pointer;
+  transition: all 0.28s cubic-bezier(0.2, 0.9, 0.3, 1);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.45);
+}
+.rail-card:hover {
+  transform: translateX(6px) scale(1.02); border-color: var(--c1);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.6), 0 0 22px color-mix(in srgb, var(--c1) 45%, transparent);
+}
+#vinyl-rails-right .rail-card:hover {
+  transform: translateX(-6px) scale(1.02); border-color: var(--c2);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.6), 0 0 22px color-mix(in srgb, var(--c2) 45%, transparent);
+}
+.rail-card.active-track {
+  border-color: var(--c1); background: rgba(30, 20, 36, 0.75);
+  box-shadow: 0 0 24px color-mix(in srgb, var(--c1) 40%, transparent);
+}
+.rail-cover {
+  width: 48px; height: 48px; border-radius: 8px; background-size: cover; background-position: center;
+  flex-shrink: 0; box-shadow: 0 4px 14px rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.15);
+}
+.rail-info {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;
+}
+.rail-title-text {
+  font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff;
+}
+.rail-artist-text {
+  font-size: 11px; opacity: 0.65; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.rail-badge {
+  font-size: 9px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;
+  padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,0.08);
+  width: fit-content; margin-top: 2px; opacity: 0.65;
+}
+.rail-badge.now {
+  background: var(--c1); color: #08080c; opacity: 1; font-weight: 900;
+  box-shadow: 0 0 12px var(--c1);
+}
+
+/* ---------- Scène centrale : Platine Vinyle ---------- */
+#vinyl-stage {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  position: relative; z-index: 5; pointer-events: none;
+}
+#vinyl-platter-glow {
+  position: absolute; left: 50%; top: 40%; width: 520px; height: 520px; border-radius: 50%;
+  transform: translate(-50%, -50%); pointer-events: none; z-index: 1;
+  background: radial-gradient(circle, color-mix(in srgb, var(--c1) 60%, var(--c2)) 0%, color-mix(in srgb, var(--c1) 35%, transparent) 40%, color-mix(in srgb, var(--c2) 15%, transparent) 65%, transparent 75%);
+  filter: blur(48px); opacity: 0.85; transition: opacity 0.15s ease-out;
+}
+#vinyl-deck {
+  position: relative; width: 620px; height: 350px; display: flex; align-items: center; justify-content: center; z-index: 2;
+}
+
+/* Pochette vinyle carrée 3D */
+#vinyl-sleeve {
+  position: absolute; left: 50px; top: 25px; width: 290px; height: 290px; border-radius: 12px;
+  overflow: hidden; z-index: 2; transform: perspective(1000px) rotateY(16deg) rotateX(4deg);
+  box-shadow: -22px 28px 65px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.18), 0 0 45px color-mix(in srgb, var(--c1) 35%, transparent);
+  transition: transform 0.4s ease; background: #121216;
+}
+#v-sleeve-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.sleeve-sheen {
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.25) 0%, transparent 45%, rgba(0,0,0,0.5) 100%);
+  pointer-events: none;
+}
+.sleeve-badge {
+  position: absolute; bottom: 12px; right: 12px; font-size: 10px; font-weight: 800; letter-spacing: 1.5px;
+  background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); padding: 4px 8px; border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.2); color: #fff;
+}
+
+/* Disque vinyle LP 33 tours */
+#vinyl-disc {
+  position: absolute; left: 215px; top: 10px; width: 320px; height: 320px; border-radius: 50%; z-index: 3;
+  background:
+    repeating-radial-gradient(circle at center, transparent 0, transparent 2px, rgba(255,255,255,0.035) 3px, transparent 4px),
+    conic-gradient(from 0deg at 50% 50%,
+      rgba(255,255,255,0.2) 0deg, transparent 45deg,
+      rgba(255,255,255,0.2) 90deg, transparent 135deg,
+      rgba(255,255,255,0.2) 180deg, transparent 225deg,
+      rgba(255,255,255,0.2) 270deg, transparent 315deg,
+      rgba(255,255,255,0.2) 360deg),
+    radial-gradient(circle at center, #1e1e28 0%, #0d0d12 70%, #050508 100%);
+  box-shadow: 0 35px 90px rgba(0,0,0,0.95), 0 0 50px color-mix(in srgb, var(--c2) 40%, transparent), inset 0 0 0 1px rgba(255,255,255,0.15);
+  animation: vinyl-spin 2.8s linear infinite; will-change: transform;
+}
+body.paused #vinyl-disc { animation-play-state: paused; }
+@keyframes vinyl-spin { to { transform: rotate(360deg); } }
+
+/* Macaron central du vinyle */
+.vinyl-label {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: 110px; height: 110px; border-radius: 50%; overflow: hidden;
+  border: 2px solid rgba(255,255,255,0.25); box-shadow: 0 0 20px rgba(0,0,0,0.8); background: #000;
+}
+#v-label-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.vinyl-center-hole {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: 16px; height: 16px; border-radius: 50%; background: #000;
+  border: 2px solid #999; box-shadow: inset 0 2px 4px #000;
+}
+
+/* Bras de lecture haute fidélité */
+#vinyl-arm {
+  position: absolute; right: 28px; top: -5px; width: 70px; height: 260px; z-index: 4;
+  transform-origin: 35px 25px; transform: rotate(var(--arm-deg, 26deg));
+  transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.25, 1); pointer-events: none;
+}
+body.paused #vinyl-arm { --arm-deg: 4deg; }
+.arm-base {
+  position: absolute; left: 15px; top: 5px; width: 40px; height: 40px; border-radius: 50%;
+  background: radial-gradient(circle, #555 0%, #222 70%, #111 100%);
+  border: 2px solid rgba(255,255,255,0.3); box-shadow: 0 6px 16px rgba(0,0,0,0.8);
+}
+.arm-pivot {
+  position: absolute; left: 28px; top: 18px; width: 14px; height: 14px; border-radius: 50%;
+  background: #bbb; box-shadow: 0 0 6px rgba(255,255,255,0.5);
+}
+.arm-rod {
+  position: absolute; left: 33px; top: 30px; width: 5px; height: 175px;
+  background: linear-gradient(90deg, #ddd, #888, #444); border-radius: 2px;
+  transform: rotate(10deg); transform-origin: top center; box-shadow: 2px 4px 10px rgba(0,0,0,0.5);
+}
+.arm-head {
+  position: absolute; left: 50px; bottom: 42px; width: 16px; height: 34px;
+  background: #222; border-radius: 3px; border: 1px solid #777; transform: rotate(18deg);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+}
+
+/* Informations du vinyle */
+#vinyl-meta {
+  margin-top: 18px; text-align: center; max-width: 540px; z-index: 5; pointer-events: auto;
+}
+#v-title {
+  font-size: clamp(24px, 2.6vw, 42px); font-weight: 800; letter-spacing: -0.015em; line-height: 1.15;
+  text-shadow: 0 4px 30px color-mix(in srgb, var(--c1) 80%, transparent);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#v-artist {
+  margin-top: 4px; font-size: clamp(14px, 1.4vw, 20px); font-weight: 400; opacity: 0.75;
+  letter-spacing: 2px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.vinyl-tags {
+  margin-top: 10px; display: flex; gap: 10px; justify-content: center; align-items: center;
+}
+.v-tag {
+  font-size: 11px; font-weight: 700; letter-spacing: 1.5px; padding: 4px 12px; border-radius: 20px;
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); backdrop-filter: blur(10px);
+}
+.v-tag.neon-pill {
+  border-color: var(--c2); color: var(--c2);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--c2) 40%, transparent);
+}
