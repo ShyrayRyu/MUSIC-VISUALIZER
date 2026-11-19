@@ -71,7 +71,7 @@ const EN = {
   "← Retour": "← Back", "Commencer": "Start", "Ne plus me demander au démarrage": "Don't ask me again at startup",
   "Lance une musique": "Play some music", "YouTube Music, Deezer, Spotify… dans ton navigateur ou ton app.<br>Elle apparaîtra ici automatiquement.": "YouTube Music, Deezer, Spotify… in your browser or app.<br>It will show up here automatically.",
   "Raccourcis : <b>M</b> mode · <b>S</b> réglages · <b>F11</b> plein écran · <b>Espace</b> pause · <b>←/→</b> piste préc./suiv.": "Shortcuts: <b>M</b> mode · <b>S</b> settings · <b>F11</b> fullscreen · <b>Space</b> pause · <b>←/→</b> prev/next track",
-  "Précédent": "Previous", "Lecture / Pause": "Play / Pause", "Suivant": "Next", "Changer de mode (M)": "Switch mode (M)", "Plein écran (F11)": "Fullscreen (F11)", "Réglages (S)": "Settings (S)"
+  "Linux : installe playerctl →  sudo apt install playerctl": "Linux: install playerctl →  sudo apt install playerctl", "Système non supporté": "Unsupported system", "Précédent": "Previous", "Lecture / Pause": "Play / Pause", "Suivant": "Next", "Changer de mode (M)": "Switch mode (M)", "Plein écran (F11)": "Fullscreen (F11)", "Réglages (S)": "Settings (S)"
 };
 const tr = (s) => (S.lang === 'en' && EN[s]) || s;
 function applyStatic() {
@@ -155,6 +155,10 @@ let lyrics = { lines: [], synced: false };
 const pos = () => base.pos + (playing ? performance.now() - base.at : 0) + S.offset;
 
 api.onMedia((m) => {
+  if (m.type === 'error') {
+    const msg = m.code === 'playerctl-missing' ? tr('Linux : installe playerctl →  sudo apt install playerctl') : tr('Système non supporté');
+    $('empty').querySelector('p').innerHTML = msg; body.classList.add('no-media'); return;
+  }
   if (m.type === 'cover') { if (track && m.key === track.key) setCover('data:image/png;base64,' + m.data); return; }
   if (!m.active || !m.title) { body.classList.add('no-media'); return; }
   body.classList.remove('no-media');
@@ -306,11 +310,22 @@ function updateLyrics() {
 let analyser = null, freq = null, audioOK = false, sampleRate = 48000;
 async function initAudio() {
   try {
-    const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-    stream.getVideoTracks().forEach((t) => t.stop());
-    if (!stream.getAudioTracks().length) throw new Error('no audio');
+    let tracks = null;
+    if (/Linux/.test(navigator.userAgent)) { // Linux : on écoute la source "Monitor of ..." de PulseAudio / PipeWire
+      try {
+        await (await navigator.mediaDevices.getUserMedia({ audio: true })).getTracks().forEach((t) => t.stop()); // débloque les libellés
+        const dev = (await navigator.mediaDevices.enumerateDevices()).find((d) => d.kind === 'audioinput' && /monitor/i.test(d.label));
+        if (dev) tracks = (await navigator.mediaDevices.getUserMedia({ audio: { deviceId: { exact: dev.deviceId }, echoCancellation: false, noiseSuppression: false, autoGainControl: false } })).getAudioTracks();
+      } catch (e) { console.warn('monitor Linux indisponible', e); }
+    }
+    if (!tracks) {
+      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+      stream.getVideoTracks().forEach((t) => t.stop());
+      tracks = stream.getAudioTracks();
+    }
+    if (!tracks.length) throw new Error('no audio');
     const ctx = new AudioContext(); sampleRate = ctx.sampleRate;
-    const src = ctx.createMediaStreamSource(new MediaStream(stream.getAudioTracks()));
+    const src = ctx.createMediaStreamSource(new MediaStream(tracks));
     analyser = ctx.createAnalyser(); analyser.fftSize = 2048; analyser.smoothingTimeConstant = .72;
     src.connect(analyser); freq = new Uint8Array(analyser.frequencyBinCount); audioOK = true;
   } catch (e) { audioOK = false; console.warn('Capture audio indisponible, animation simulée', e); }

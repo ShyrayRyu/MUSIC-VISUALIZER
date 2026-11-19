@@ -1,25 +1,17 @@
 const { app, BrowserWindow, ipcMain, desktopCapturer, session, dialog } = require('electron');
 const path = require('path');
-const { spawn } = require('child_process');
 
-let win, ps;
+let win, media;
+
+// Linux : l'AppArmor d'Ubuntu 24.04+ bloque le sandbox Chromium d'Electron installé via npm.
+// L'appli ne charge que des fichiers locaux, on le désactive donc sur Linux.
+if (process.platform === 'linux') app.commandLine.appendSwitch('no-sandbox');
 
 function startMedia() {
-  ps = spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(__dirname, 'smtc.ps1')], { windowsHide: true });
-  let buf = '';
-  ps.stdout.setEncoding('utf8');
-  ps.stdout.on('data', (d) => {
-    buf += d;
-    let i;
-    while ((i = buf.indexOf('\n')) >= 0) {
-      const line = buf.slice(0, i).trim();
-      buf = buf.slice(i + 1);
-      if (line && win && !win.isDestroyed()) {
-        try { win.webContents.send('media', JSON.parse(line)); } catch {}
-      }
-    }
-  });
-  ps.on('exit', () => { ps = null; });
+  const send = (m) => { if (win && !win.isDestroyed()) win.webContents.send('media', m); };
+  if (process.platform === 'win32') media = require('./media-win')(send);
+  else if (process.platform === 'linux') media = require('./media-linux')(send);
+  else send({ type: 'error', code: 'unsupported' });
 }
 
 // ---------- Paroles (LRCLIB, synchronisées) ----------
@@ -62,7 +54,7 @@ ipcMain.handle('lyrics', async (_e, { title, artist, album, duration }) => {
   return r;
 });
 
-ipcMain.on('cmd', (_e, c) => { if (ps && ps.stdin.writable) ps.stdin.write(c + '\n'); });
+ipcMain.on('cmd', (_e, c) => { if (media) media.send(c); });
 ipcMain.on('fullscreen', () => win.setFullScreen(!win.isFullScreen()));
 ipcMain.on('ontop', (_e, v) => win.setAlwaysOnTop(!!v));
 ipcMain.handle('pickFile', async () => {
@@ -85,10 +77,10 @@ function createWindow() {
 app.whenReady().then(() => {
   // Capture du son système (loopback) pour le visualiseur, sans fenêtre de sélection
   session.defaultSession.setDisplayMediaRequestHandler((_req, cb) => {
-    desktopCapturer.getSources({ types: ['screen'] }).then((s) => cb({ video: s[0], audio: 'loopback' }));
+    desktopCapturer.getSources({ types: ['screen'] }).then((s) => cb({ video: s[0], audio: 'loopback' })).catch(() => cb({}));
   });
   createWindow();
   startMedia();
 });
 
-app.on('window-all-closed', () => { if (ps) ps.kill(); app.quit(); });
+app.on('window-all-closed', () => { if (media) media.stop(); app.quit(); });
