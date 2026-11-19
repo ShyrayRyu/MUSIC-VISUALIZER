@@ -16,10 +16,11 @@ const DEFAULTS = {
   // paroles
   lyricsSize: 56, font: 'Segoe UI Variable Display', align: 'left', offset: 0, wordFill: true,
   // divers
-  askAtStart: true, clock24: true, clockSize: 48, queueCount: 6, onTop: false, fps: 60
+  lang: (navigator.language || 'fr').startsWith('fr') ? 'fr' : 'en', askAtStart: true, clock24: true, clockSize: 48, queueCount: 6, onTop: false, fps: 60
 };
 const SCHEMA = [
   ['Mode', [
+    ['lang', 'select', 'Langue / Language', { fr: 'Français', en: 'English' }],
     ['mode', 'select', 'Mode d\'affichage', { visualizer: 'Visualiseur circulaire', lyrics: 'Paroles + clip' }]]],
   ['Interface', [
     ['halo', 'toggle', 'Halo lumineux des bords'], ['clock', 'toggle', 'Horloge'], ['clockSize', 'range', 'Taille horloge', [24, 120, 2]],
@@ -44,6 +45,40 @@ const SCHEMA = [
 ];
 let S = { ...DEFAULTS, ...JSON.parse(localStorage.getItem('mv-settings') || '{}') };
 const save = () => localStorage.setItem('mv-settings', JSON.stringify(S));
+
+/* =================== LANGUE (FR / EN) =================== */
+const EN = {
+  "Mode": "Mode", "Interface": "Interface", "Fond / clip": "Background / clip", "Couleurs": "Colors", "Visualiseur": "Visualizer", "Paroles": "Lyrics", "Performance": "Performance",
+  "Mode d'affichage": "Display mode", "Visualiseur circulaire": "Circular visualizer", "Paroles + clip": "Lyrics + clip",
+  "Halo lumineux des bords": "Glowing edge halo", "Horloge": "Clock", "Taille horloge": "Clock size", "Format 24 h": "24-hour format",
+  "Pochettes sur le côté (historique)": "Side covers (history)", "Nombre de pochettes": "Number of covers", "Assistant au démarrage": "Setup wizard at startup",
+  "Ouvrir l'assistant de configuration": "Open the setup wizard", "Barre de contrôle": "Control bar", "Masquer l'interface au repos": "Hide interface when idle", "Toujours au premier plan": "Always on top",
+  "Type de fond": "Background type", "Pochette floutée": "Blurred cover", "Aurore animée": "Animated aurora", "Mon clip / image": "My clip / image", "Noir": "Black",
+  "Fichier (vidéo, gif, image)": "File (video, gif, image)", "Flou": "Blur", "Assombrissement": "Dimming",
+  "Couleurs auto (pochette)": "Auto colors (from cover)", "Couleur 1": "Color 1", "Couleur 2": "Color 2", "Intensité lumineuse": "Glow intensity",
+  "Pochette ronde": "Round cover", "Pochette qui tourne": "Spinning cover", "Afficher la ligne de paroles": "Show current lyric line", "Style": "Style", "Barres": "Bars", "Courbe": "Curve", "Points": "Dots",
+  "Nombre de barres": "Number of bars", "Sensibilité": "Sensitivity", "Taille": "Size",
+  "Taille du texte": "Text size", "Remplissage mot par mot": "Word-by-word fill", "Alignement": "Alignment", "Gauche": "Left", "Centre": "Center", "Droite": "Right", "Police": "Font", "Décalage synchro (ms)": "Sync offset (ms)",
+  "Images / seconde": "Frames per second",
+  "Choisir…": "Choose…", "Ouvrir": "Open", "Réinitialiser": "Reset",
+  "Recherche des paroles…": "Searching for lyrics…", "Paroles non synchronisées": "Unsynchronized lyrics", "Paroles introuvables pour ce titre": "No lyrics found for this track",
+  "Que veux-tu afficher ?": "What do you want to display?", "Choisis ton mode. Tu pourras en changer à tout moment avec la touche M.": "Pick your mode. You can switch anytime with the M key.",
+  "Pochette ronde qui tourne, barres audio réactives au son, halo lumineux.": "Spinning round cover, sound-reactive audio bars, glowing halo.",
+  "Paroles synchronisées en grand, mot par mot, avec un clip ou une image en fond.": "Large synced lyrics, word by word, with a clip or image behind.",
+  "Passer (garder mes réglages)": "Skip (keep my settings)", "Personnalise les fonctions": "Customize features",
+  "Active ou désactive ce que tu veux. Tout reste modifiable dans les réglages (touche S).": "Turn on or off whatever you like. Everything stays editable in settings (S key).",
+  "Pochettes sur le côté": "Side covers", "Ligne de paroles sous le titre": "Lyric line under the title", "Fond": "Background", "Mon clip / image…": "My clip / image…",
+  "← Retour": "← Back", "Commencer": "Start", "Ne plus me demander au démarrage": "Don't ask me again at startup",
+  "Lance une musique": "Play some music", "YouTube Music, Deezer, Spotify… dans ton navigateur ou ton app.<br>Elle apparaîtra ici automatiquement.": "YouTube Music, Deezer, Spotify… in your browser or app.<br>It will show up here automatically.",
+  "Raccourcis : <b>M</b> mode · <b>S</b> réglages · <b>F11</b> plein écran · <b>Espace</b> pause · <b>←/→</b> piste préc./suiv.": "Shortcuts: <b>M</b> mode · <b>S</b> settings · <b>F11</b> fullscreen · <b>Space</b> pause · <b>←/→</b> prev/next track",
+  "Précédent": "Previous", "Lecture / Pause": "Play / Pause", "Suivant": "Next", "Changer de mode (M)": "Switch mode (M)", "Plein écran (F11)": "Fullscreen (F11)", "Réglages (S)": "Settings (S)"
+};
+const tr = (s) => (S.lang === 'en' && EN[s]) || s;
+function applyStatic() {
+  document.documentElement.lang = S.lang;
+  $('empty').innerHTML = `<div class="pulse"></div><h1>${tr('Lance une musique')}</h1><p>${tr('YouTube Music, Deezer, Spotify… dans ton navigateur ou ton app.<br>Elle apparaîtra ici automatiquement.')}</p>`;
+  [['b-prev', 'Précédent'], ['b-play', 'Lecture / Pause'], ['b-next', 'Suivant'], ['b-mode', 'Changer de mode (M)'], ['b-fs', 'Plein écran (F11)'], ['b-set', 'Réglages (S)']].forEach(([i, s]) => { $(i).title = tr(s); });
+}
 
 function applySettings() {
   body.className = body.className.split(' ').filter((c) => /^(no-media|paused|idle|settings-open|plain|wizard-open)$/.test(c)).join(' ');
@@ -82,10 +117,10 @@ function buildSettings() {
   const root = $('settings-body');
   root.innerHTML = '';
   for (const [title, items] of SCHEMA) {
-    const h = document.createElement('h2'); h.textContent = title; root.appendChild(h);
+    const h = document.createElement('h2'); h.textContent = tr(title); root.appendChild(h);
     for (const [key, type, label, opt] of items) {
       const row = document.createElement('div'); row.className = 'row';
-      const lb = document.createElement('label'); lb.textContent = label; row.appendChild(lb);
+      const lb = document.createElement('label'); lb.textContent = tr(label); row.appendChild(lb);
       let el;
       if (type === 'toggle') { el = document.createElement('input'); el.type = 'checkbox'; el.className = 'sw'; el.checked = !!S[key]; el.onchange = () => { S[key] = el.checked; applySettings(); }; }
       else if (type === 'range') {
@@ -95,18 +130,18 @@ function buildSettings() {
         row.appendChild(v);
       } else if (type === 'select') {
         el = document.createElement('select');
-        for (const [k, t] of Object.entries(opt)) { const o = document.createElement('option'); o.value = k; o.textContent = t; el.appendChild(o); }
-        el.value = S[key]; el.onchange = () => { S[key] = isNaN(el.value) ? el.value : +el.value; applySettings(); if (key === 'mode') buildSettings(); };
+        for (const [k, name] of Object.entries(opt)) { const o = document.createElement('option'); o.value = k; o.textContent = tr(name); el.appendChild(o); }
+        el.value = S[key]; el.onchange = () => { S[key] = isNaN(el.value) ? el.value : +el.value; if (key === 'lang') applyStatic(); applySettings(); if (key === 'mode' || key === 'lang') buildSettings(); if (key === 'lang' && body.classList.contains('wizard-open')) wizStep(1); };
       } else if (type === 'color') { el = document.createElement('input'); el.type = 'color'; el.value = S[key]; el.oninput = () => { S[key] = el.value; S.accentAuto = false; applySettings(); }; }
-      else if (type === 'action') { el = document.createElement('button'); el.textContent = 'Ouvrir'; el.onclick = () => { body.classList.remove('settings-open'); openWizard(); }; }
-      else if (type === 'file') { el = document.createElement('button'); el.textContent = 'Choisir…'; el.onclick = async () => { const p = await api.pickFile(); if (p) { S.bgFile = p; S.bgMode = 'custom'; applySettings(); buildSettings(); } }; }
+      else if (type === 'action') { el = document.createElement('button'); el.textContent = tr('Ouvrir'); el.onclick = () => { body.classList.remove('settings-open'); openWizard(); }; }
+      else if (type === 'file') { el = document.createElement('button'); el.textContent = tr('Choisir…'); el.onclick = async () => { const p = await api.pickFile(); if (p) { S.bgFile = p; S.bgMode = 'custom'; applySettings(); buildSettings(); } }; }
       row.appendChild(el); root.appendChild(row);
     }
   }
-  const r = document.createElement('button'); r.textContent = 'Réinitialiser'; r.style.cssText = 'margin-top:24px;padding:8px 14px;background:#ffffff14;color:#fff;border:1px solid #ffffff22;border-radius:8px;cursor:pointer';
+  const r = document.createElement('button'); r.textContent = tr('Réinitialiser'); r.style.cssText = 'margin-top:24px;padding:8px 14px;background:#ffffff14;color:#fff;border:1px solid #ffffff22;border-radius:8px;cursor:pointer';
   r.onclick = () => { S = { ...DEFAULTS }; applySettings(); buildSettings(); }; root.appendChild(r);
   const hint = document.createElement('div'); hint.className = 'hint';
-  hint.innerHTML = 'Raccourcis : <b>M</b> mode · <b>S</b> réglages · <b>F11</b> plein écran · <b>Espace</b> pause · <b>←/→</b> piste préc./suiv.';
+  hint.innerHTML = tr('Raccourcis : <b>M</b> mode · <b>S</b> réglages · <b>F11</b> plein écran · <b>Espace</b> pause · <b>←/→</b> piste préc./suiv.');
   root.appendChild(hint);
 }
 
@@ -213,12 +248,12 @@ function parseLRC(txt) {
 }
 async function loadLyrics(m) {
   const key = m.key;
-  setLyrics([], false, 'Recherche des paroles…');
+  setLyrics([], false, tr('Recherche des paroles…'));
   const r = await api.lyrics({ title: m.title, artist: m.artist, album: m.album, duration: m.dur });
   if (!track || track.key !== key) return;
   if (r && r.synced) setLyrics(parseLRC(r.synced), true, '');
-  else if (r && r.plain) setLyrics(r.plain.split(/\r?\n/).map((t) => ({ t: 0, text: t.trim() })), false, 'Paroles non synchronisées');
-  else setLyrics([], false, 'Paroles introuvables pour ce titre');
+  else if (r && r.plain) setLyrics(r.plain.split(/\r?\n/).map((t) => ({ t: 0, text: t.trim() })), false, tr('Paroles non synchronisées'));
+  else setLyrics([], false, tr('Paroles introuvables pour ce titre'));
 }
 function setLyrics(lines, synced, status) {
   lyrics = { lines, synced };
@@ -415,45 +450,47 @@ function wizStep(n) {
   const box = $('wz-box'); box.innerHTML = '';
   const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html) e.innerHTML = html; box.appendChild(e); return e; };
   if (n === 1) {
-    h('h1', '', 'Que veux-tu afficher ?');
-    h('div', 'sub', 'Choisis ton mode. Tu pourras en changer à tout moment avec la touche M.');
+    const lg = h('div', 'wz-actions'); lg.style.marginBottom = '18px';
+    [['fr', 'Français'], ['en', 'English']].forEach(([k, name]) => { const b = document.createElement('button'); b.className = 'wz-btn' + (S.lang === k ? '' : ' ghost'); b.style.padding = '6px 20px'; b.textContent = name; b.onclick = () => { S.lang = k; applyStatic(); applySettings(); buildSettings(); wizStep(1); }; lg.appendChild(b); });
+    h('h1', '', tr('Que veux-tu afficher ?'));
+    h('div', 'sub', tr('Choisis ton mode. Tu pourras en changer à tout moment avec la touche M.'));
     const cards = h('div', 'wz-cards');
     [['visualizer', '🎵', 'Visualiseur circulaire', 'Pochette ronde qui tourne, barres audio réactives au son, halo lumineux.'],
      ['lyrics', '🎤', 'Paroles + clip', 'Paroles synchronisées en grand, mot par mot, avec un clip ou une image en fond.']].forEach(([k, ic, t, d]) => {
       const c = document.createElement('div'); c.className = 'wz-card' + (S.mode === k ? ' sel' : '');
-      c.innerHTML = `<div class="ic">${ic}</div><h3>${t}</h3><p>${d}</p>`;
+      c.innerHTML = `<div class="ic">${ic}</div><h3>${tr(t)}</h3><p>${tr(d)}</p>`;
       c.onclick = () => { S.mode = k; wizStep(2); };
       cards.appendChild(c);
     });
-    const a = h('div', 'wz-actions'); const sk = document.createElement('button'); sk.className = 'wz-btn ghost'; sk.textContent = 'Passer (garder mes réglages)'; sk.onclick = closeWizard; a.appendChild(sk);
+    const a = h('div', 'wz-actions'); const sk = document.createElement('button'); sk.className = 'wz-btn ghost'; sk.textContent = tr('Passer (garder mes réglages)'); sk.onclick = closeWizard; a.appendChild(sk);
   } else {
-    h('h1', '', 'Personnalise les fonctions');
-    h('div', 'sub', 'Active ou désactive ce que tu veux. Tout reste modifiable dans les réglages (touche S).');
+    h('h1', '', tr('Personnalise les fonctions'));
+    h('div', 'sub', tr('Active ou désactive ce que tu veux. Tout reste modifiable dans les réglages (touche S).'));
     const grid = h('div', 'wz-grid');
     const items = [['halo', 'Halo lumineux des bords'], ['clock', 'Horloge'], ['queue', 'Pochettes sur le côté'], ['controls', 'Barre de contrôle'], ['autoHide', 'Masquer l\'interface au repos'], ['accentAuto', 'Couleurs auto (pochette)']]
       .concat(S.mode === 'visualizer' ? [['cover', 'Pochette ronde'], ['spin', 'Pochette qui tourne'], ['vizCaption', 'Ligne de paroles sous le titre']] : [['wordFill', 'Remplissage mot par mot']]);
     items.forEach(([k, label]) => {
-      const r = document.createElement('div'); r.className = 'row'; r.innerHTML = `<label>${label}</label>`;
+      const r = document.createElement('div'); r.className = 'row'; r.innerHTML = `<label>${tr(label)}</label>`;
       const i = document.createElement('input'); i.type = 'checkbox'; i.className = 'sw'; i.checked = !!S[k]; i.onchange = () => { S[k] = i.checked; };
       r.appendChild(i); grid.appendChild(r);
     });
-    const r = document.createElement('div'); r.className = 'row'; r.innerHTML = '<label>Fond</label>';
+    const r = document.createElement('div'); r.className = 'row'; r.innerHTML = '<label>' + tr('Fond') + '</label>';
     const sel = document.createElement('select');
-    for (const [k, t] of Object.entries({ cover: 'Pochette floutée', aurora: 'Aurore animée', custom: 'Mon clip / image…', black: 'Noir' })) { const o = document.createElement('option'); o.value = k; o.textContent = t; sel.appendChild(o); }
+    for (const [k, t] of Object.entries({ cover: 'Pochette floutée', aurora: 'Aurore animée', custom: 'Mon clip / image…', black: 'Noir' })) { const o = document.createElement('option'); o.value = k; o.textContent = tr(t); sel.appendChild(o); }
     sel.value = S.bgMode;
     sel.onchange = async () => { S.bgMode = sel.value; if (sel.value === 'custom') { const p = await api.pickFile(); if (p) S.bgFile = p; else { S.bgMode = 'cover'; sel.value = 'cover'; } } };
     r.appendChild(sel); grid.appendChild(r);
     const a = h('div', 'wz-actions');
-    const back = document.createElement('button'); back.className = 'wz-btn ghost'; back.textContent = '← Retour'; back.onclick = () => wizStep(1);
-    const go = document.createElement('button'); go.className = 'wz-btn'; go.textContent = 'Commencer'; go.onclick = closeWizard;
+    const back = document.createElement('button'); back.className = 'wz-btn ghost'; back.textContent = tr('← Retour'); back.onclick = () => wizStep(1);
+    const go = document.createElement('button'); go.className = 'wz-btn'; go.textContent = tr('Commencer'); go.onclick = closeWizard;
     a.append(back, go);
     const ask = h('label', 'wz-ask'); const c = document.createElement('input'); c.type = 'checkbox'; c.className = 'sw'; c.checked = !S.askAtStart; c.onchange = () => { S.askAtStart = !c.checked; };
-    ask.append(c, document.createTextNode('Ne plus me demander au démarrage'));
+    ask.append(c, document.createTextNode(tr('Ne plus me demander au démarrage')));
   }
 }
 /* =================== DÉMARRAGE =================== */
 body.classList.add('no-media');
-buildSettings(); applySettings(); wake();
+applyStatic(); buildSettings(); applySettings(); wake();
 if (S.askAtStart) openWizard();
 initAudio();
 requestAnimationFrame(frame);
