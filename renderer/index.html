@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: file: blob:; media-src 'self' file: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'">
+<title>Music Visualizer</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="mode-visualizer">
+  <div id="bg">
+    <div id="bg-aurora"><i></i><i></i><i></i></div>
+    <div id="bg-cover"></div>
+    <video id="bg-video" muted loop autoplay playsinline></video>
+    <img id="bg-image" alt="">
+    <div id="bg-dim"></div>
+  </div>
+  <div id="halo"></div>
+
+  <div id="clock"></div>
+
+  <aside id="queue"></aside>
+
+  <main id="stage">
+    <section id="viz">
+      <canvas id="canvas"></canvas>
+      <div id="cover-wrap"><img id="cover" alt=""></div>
+      <div id="meta"><div id="m-title"></div><div id="m-artist"></div><div id="m-caption"></div></div>
+    </section>
+    <section id="lyrics-view">
+      <div id="lyrics-mask"><div id="lyrics"></div></div>
+      <div id="lyrics-status"></div>
+    </section>
+  </main>
+
+  <div id="empty"><div class="pulse"></div><h1>Lance une musique</h1><p>YouTube Music, Deezer, Spotify… dans ton navigateur ou ton app.<br>Elle apparaîtra ici automatiquement.</p></div>
+
+  <div id="controls">
+    <img id="c-cover" alt="">
+    <div id="c-info"><b id="c-title"></b><span id="c-artist"></span></div>
+    <button id="b-prev" title="Précédent">⏮</button>
+    <button id="b-play" title="Lecture / Pause">⏯</button>
+    <button id="b-next" title="Suivant">⏭</button>
+    <span id="c-time">0:00</span>
+    <div id="bar"><div id="bar-fill"></div></div>
+    <span id="c-dur">0:00</span>
+    <button id="b-mode" title="Changer de mode (M)">◐</button>
+    <button id="b-fs" title="Plein écran (F11)">⛶</button>
+    <button id="b-set" title="Réglages (S)">⚙</button>
+  </div>
+
+  <div id="wizard"><div id="wz-box"></div></div>
+  <div id="settings"><div id="settings-body"></div></div>
+  <script src="app.js"></script>
+</body>
+</html>
