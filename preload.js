@@ -5,7 +5,6 @@ contextBridge.exposeInMainWorld('api', {
   lyrics: (q) => ipcRenderer.invoke('lyrics', q),
   fullscreen: () => ipcRenderer.send('fullscreen'),
   onTop: (v) => ipcRenderer.send('ontop', v),
-  ytSearch: (q) => ipcRenderer.invoke('ytsearch', q),
-  ytPort: () => ipcRenderer.invoke('ytport'),
+  visuals: (q) => ipcRenderer.invoke('visuals', q),
   pickFile: () => ipcRenderer.invoke('pickFile')
 });
