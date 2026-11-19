@@ -8,28 +8,27 @@ const DEFAULTS = {
   // affichage
   halo: true, clock: true, queue: true, controls: true, autoHide: true,
   // fond
-  bgMode: 'cover', clipDelay: 0, bgFile: '', bgBlur: 40, bgDim: 55,
+  bgMode: 'clip', bgFile: '', bgBlur: 40, bgDim: 55,
   // couleurs
   accentAuto: true, accent1: '#ff5ea8', accent2: '#ffb347', glow: 100,
   // visualiseur
   cover: true, spin: true, vizCaption: false, barStyle: 'bars', bars: 96, sens: 120, vizSize: 60,
   // paroles
-  lyricsSize: 56, font: 'Segoe UI Variable Display', align: 'left', offset: 0, wordFill: true,
+  lyricsSize: 56, font: 'Outfit', align: 'left', offset: 0, wordFill: true,
   // divers
   lang: (navigator.language || 'fr').startsWith('fr') ? 'fr' : 'en', askAtStart: true, clock24: true, clockSize: 48, queueCount: 6, onTop: false, fps: 60
 };
 const SCHEMA = [
   ['Mode', [
     ['lang', 'select', 'Langue / Language', { fr: 'Français', en: 'English' }],
-    ['mode', 'select', 'Mode d\'affichage', { visualizer: 'Visualiseur circulaire', lyrics: 'Paroles + clip' }]]],
+    ['mode', 'select', 'Mode d\'affichage', { visualizer: 'Visualiseur circulaire', lyrics: 'Paroles + clip', vinyl: 'Vinyle & file d\'attente' }]]],
   ['Interface', [
     ['halo', 'toggle', 'Halo lumineux des bords'], ['clock', 'toggle', 'Horloge'], ['clockSize', 'range', 'Taille horloge', [24, 120, 2]],
     ['clock24', 'toggle', 'Format 24 h'], ['queue', 'toggle', 'Pochettes sur le côté (historique)'], ['queueCount', 'range', 'Nombre de pochettes', [2, 10, 1]],
     ['askAtStart', 'toggle', 'Assistant au démarrage'], ['wizard', 'action', 'Ouvrir l\'assistant de configuration'],
     ['controls', 'toggle', 'Barre de contrôle'], ['autoHide', 'toggle', 'Masquer l\'interface au repos'], ['onTop', 'toggle', 'Toujours au premier plan']]],
   ['Fond / clip', [
-    ['bgMode', 'select', 'Type de fond', { cover: 'Pochette floutée', youtube: 'Clip YouTube (auto)', aurora: 'Aurore animée', custom: 'Mon fichier (vidéo / image)', black: 'Noir' }],
-    ['clipDelay', 'range', 'Décalage du clip (s)', [-30, 30, 1]],
+    ['bgMode', 'select', 'Type de fond', { clip: 'Clip officiel / photo artiste (auto)', cover: 'Pochette floutée', aurora: 'Aurore animée', custom: 'Mon fichier (vidéo / image)', black: 'Noir' }],
     ['bgFile', 'file', 'Fichier (vidéo, gif, image)'], ['bgBlur', 'range', 'Flou', [0, 100, 1]], ['bgDim', 'range', 'Assombrissement', [0, 95, 1]]]],
   ['Couleurs', [
     ['accentAuto', 'toggle', 'Couleurs auto (pochette)'], ['accent1', 'color', 'Couleur 1'], ['accent2', 'color', 'Couleur 2'], ['glow', 'range', 'Intensité lumineuse', [0, 200, 5]]]],
@@ -40,11 +39,13 @@ const SCHEMA = [
   ['Paroles', [
     ['lyricsSize', 'range', 'Taille du texte', [24, 120, 2]], ['wordFill', 'toggle', 'Remplissage mot par mot'],
     ['align', 'select', 'Alignement', { left: 'Gauche', center: 'Centre', right: 'Droite' }],
-    ['font', 'select', 'Police', { 'Segoe UI Variable Display': 'Segoe UI', 'Impact': 'Impact', 'Bahnschrift': 'Bahnschrift', 'Georgia': 'Georgia', 'Consolas': 'Consolas', 'Arial Black': 'Arial Black' }],
+    ['font', 'select', 'Police', { 'Outfit': 'Outfit', 'system-ui': 'Système', 'Impact': 'Impact', 'Georgia': 'Georgia', 'monospace': 'Mono' }],
     ['offset', 'range', 'Décalage synchro (ms)', [-3000, 3000, 50]]]],
   ['Performance', [['fps', 'select', 'Images / seconde', { 30: '30', 60: '60', 144: '144' }]]]
 ];
 let S = { ...DEFAULTS, ...JSON.parse(localStorage.getItem('mv-settings') || '{}') };
+if (S.bgMode === 'youtube') S.bgMode = 'clip';                          // migration : YouTube supprimé
+if (!['Outfit', 'system-ui', 'Impact', 'Georgia', 'monospace'].includes(S.font)) S.font = 'Outfit';
 const save = () => localStorage.setItem('mv-settings', JSON.stringify(S));
 
 /* =================== LANGUE (FR / EN) =================== */
@@ -72,7 +73,7 @@ const EN = {
   "← Retour": "← Back", "Commencer": "Start", "Ne plus me demander au démarrage": "Don't ask me again at startup",
   "Lance une musique": "Play some music", "YouTube Music, Deezer, Spotify… dans ton navigateur ou ton app.<br>Elle apparaîtra ici automatiquement.": "YouTube Music, Deezer, Spotify… in your browser or app.<br>It will show up here automatically.",
   "Raccourcis : <b>M</b> mode · <b>S</b> réglages · <b>F11</b> plein écran · <b>Espace</b> pause · <b>←/→</b> piste préc./suiv.": "Shortcuts: <b>M</b> mode · <b>S</b> settings · <b>F11</b> fullscreen · <b>Space</b> pause · <b>←/→</b> prev/next track",
-  "Linux : installe playerctl →  sudo apt install playerctl": "Linux: install playerctl →  sudo apt install playerctl", "Système non supporté": "Unsupported system", "Clip YouTube (auto)": "YouTube clip (auto)", "Mon fichier (vidéo / image)": "My file (video / image)", "Mon fichier (vidéo / image)…": "My file (video / image)…", "Décalage du clip (s)": "Clip offset (s)", "Précédent": "Previous", "Lecture / Pause": "Play / Pause", "Suivant": "Next", "Changer de mode (M)": "Switch mode (M)", "Plein écran (F11)": "Fullscreen (F11)", "Réglages (S)": "Settings (S)"
+  "Linux : installe playerctl →  sudo apt install playerctl": "Linux: install playerctl →  sudo apt install playerctl", "Système non supporté": "Unsupported system", "Clip officiel / photo artiste (auto)": "Official clip / artist photo (auto)", "Paroles approximatives (non synchronisées)": "Approximate lyrics (not synced)", "Clip officiel · Apple Music": "Official clip · Apple Music", "Vinyle & file d'attente": "Vinyl & Queue", "PRÉCÉDENTS": "PREVIOUS", "FILE D'ATTENTE": "QUEUE", "Dernier joué": "Last played", "Aucun morceau précédent": "No previous track", "Disque vinyle 33 tours réaliste, platine animée et pochettes de la file d'attente sur les côtés.": "Realistic 33 RPM vinyl record, animated turntable and queue covers on the sides.", "Mon fichier (vidéo / image)": "My file (video / image)", "Mon fichier (vidéo / image)…": "My file (video / image)…", "Décalage du clip (s)": "Clip offset (s)", "Précédent": "Previous", "Lecture / Pause": "Play / Pause", "Suivant": "Next", "Changer de mode (M)": "Switch mode (M)", "Plein écran (F11)": "Fullscreen (F11)", "Réglages (S)": "Settings (S)"
 };
 const tr = (s) => (S.lang === 'en' && EN[s]) || s;
 function applyStatic() {
@@ -82,7 +83,7 @@ function applyStatic() {
 }
 
 function applySettings() {
-  body.className = body.className.split(' ').filter((c) => /^(no-media|paused|idle|settings-open|plain|wizard-open)$/.test(c)).join(' ');
+  body.className = body.className.split(' ').filter((c) => /^(no-media|paused|idle|settings-open|plain|wizard-open|has-clip|has-artist|approx)$/.test(c)).join(' ');
   body.classList.add('mode-' + S.mode);
   const flag = (c, on) => body.classList.toggle(c, on);
   flag('no-halo', !S.halo); flag('no-clock', !S.clock); flag('no-queue', !S.queue); flag('no-controls', !S.controls);
@@ -90,7 +91,7 @@ function applySettings() {
   body.dataset.align = S.align;
   const r = document.documentElement.style;
   r.setProperty('--lyrics-size', S.lyricsSize + 'px');
-  r.setProperty('--font', `'${S.font}', 'Segoe UI', sans-serif`);
+  r.setProperty('--font', `'${S.font}', 'Outfit', system-ui, sans-serif`);
   r.setProperty('--bg-blur', S.bgBlur + 'px');
   r.setProperty('--bg-dim', S.bgDim / 100);
   $('clock').style.fontSize = S.clockSize + 'px';
@@ -106,12 +107,13 @@ function applySettings() {
     }
   }
   body.dataset.bg = bg;
-  if (S.bgMode === 'youtube') ensureClip(); else if (clipKey) stopClip();
+  if (S.bgMode === 'clip') ensureClip(); else if (clipKey) stopClip();
   if (typeof applyColors === 'function') applyColors();
   layout();
   api.onTop(S.onTop);
   tickClock();
   renderQueue();
+  renderVinylRails();
   save();
 }
 
@@ -173,100 +175,244 @@ api.onMedia((m) => {
 function newTrack(m) {
   track = { key: m.key, title: m.title, artist: m.artist, album: m.album, dur: m.dur };
   base = { pos: m.pos, at: performance.now() };
-  coverURL = ''; setCover('');
-  $('m-title').textContent = $('c-title').textContent = m.title;
-  $('m-artist').textContent = $('c-artist').textContent = m.artist;
+  coverURL = ''; setCover(''); hasBgPhoto = false;
+  $('m-title').textContent = $('c-title').textContent = $('np-title').textContent = m.title;
+  $('m-artist').textContent = $('c-artist').textContent = $('np-artist').textContent = m.artist;
+  if ($('v-title')) $('v-title').textContent = m.title;
+  if ($('v-artist')) $('v-artist').textContent = m.artist;
+
   history = history.filter((h) => h.key !== m.key);
-  history.push({ key: m.key, cover: '' });
-  history = history.slice(-12);
+  history.push({ key: m.key, title: m.title, artist: m.artist, cover: '' });
+  history = history.slice(-24);
+  try { localStorage.setItem('mv-history', JSON.stringify(history)); } catch (e) {}
+
   renderQueue();
+  renderVinylRails();
   loadLyrics(m);
-  if (S.bgMode === 'youtube') ensureClip();
+  if (S.bgMode === 'clip') ensureClip();
 }
 
-/* ----- pochette & couleurs ----- */
-function setCover(url) {
-  coverURL = url;
-  const h = history.find((x) => track && x.key === track.key);
-  $('cover').src = url || ''; $('c-cover').src = url || '';
-  $('bg-cover').style.backgroundImage = url ? `url(${url})` : '';
-  if (!url) return;
-  const img = new Image();
-  img.onload = () => {
-    const c = document.createElement('canvas'); c.width = c.height = 36;
-    const x = c.getContext('2d'); x.drawImage(img, 0, 0, 36, 36);
-    autoColors(x.getImageData(0, 0, 36, 36).data);
-    const t = document.createElement('canvas'); t.width = t.height = 120;
-    t.getContext('2d').drawImage(img, 0, 0, 120, 120);
-    if (h) { h.cover = t.toDataURL('image/jpeg', .8); renderQueue(); }
-  };
-  img.src = url;
-}
+/* ----- extraction couleurs néon (pochette + photo de fond) ----- */
+let coverHue = 330, bgHue = 35;
+let autoCover = 'hsl(330 100% 60%)', autoBg = 'hsl(35 100% 60%)';
+let hasBgPhoto = false;
+
 function rgb2hsl(r, g, b) {
   r /= 255; g /= 255; b /= 255; const mx = Math.max(r, g, b), mn = Math.min(r, g, b); let h = 0, s = 0; const l = (mx + mn) / 2;
   if (mx !== mn) { const d = mx - mn; s = l > .5 ? d / (2 - mx - mn) : d / (mx + mn);
     h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h *= 60; }
   return [h, s, l];
 }
-let auto = ['#ff5ea8', '#ffb347'];
-function autoColors(d) {
-  const buckets = Array.from({ length: 12 }, () => ({ s: 0, n: 0 }));
-  for (let i = 0; i < d.length; i += 4) {
-    const [h, s, l] = rgb2hsl(d[i], d[i + 1], d[i + 2]);
-    if (l < .15 || l > .92) continue;
-    const b = buckets[Math.floor(h / 30) % 12]; b.s += s * (1 - Math.abs(l - .5)); b.n++;
-  }
-  const ranked = buckets.map((b, i) => ({ i, sc: b.s })).sort((a, b) => b.sc - a.sc);
-  let h1 = ranked[0].sc > 0 ? ranked[0].i * 30 + 15 : 330;
-  let h2 = ranked.find((r) => r.sc > 0 && Math.min(Math.abs(r.i * 30 + 15 - h1), 360 - Math.abs(r.i * 30 + 15 - h1)) > 40);
-  h2 = h2 ? h2.i * 30 + 15 : (h1 + 40) % 360;
-  auto = [`hsl(${h1} 95% 62%)`, `hsl(${h2} 95% 60%)`];
-  applyColors();
-}
-function applyColors() {
-  const r = document.documentElement.style;
-  r.setProperty('--c1', S.accentAuto ? auto[0] : S.accent1);
-  r.setProperty('--c2', S.accentAuto ? auto[1] : S.accent2);
+
+function hslToRgbStr(h, s, l) {
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+  const m = l - c / 2;
+  let r = 0, g = 0, b = 0;
+  if (0 <= h && h < 60) { r = c; g = x; b = 0; }
+  else if (60 <= h && h < 120) { r = x; g = c; b = 0; }
+  else if (120 <= h && h < 180) { r = 0; g = c; b = x; }
+  else if (180 <= h && h < 240) { r = 0; g = x; b = c; }
+  else if (240 <= h && h < 300) { r = x; g = 0; b = c; }
+  else if (300 <= h && h < 360) { r = c; g = 0; b = x; }
+  return `${Math.round((r + m) * 255)}, ${Math.round((g + m) * 255)}, ${Math.round((b + m) * 255)}`;
 }
 
-/* ----- file latérale ----- */
+function getDominantHues(d) {
+  const buckets = Array.from({ length: 24 }, () => ({ s: 0, n: 0 }));
+  for (let i = 0; i < d.length; i += 4) {
+    const [h, s, l] = rgb2hsl(d[i], d[i + 1], d[i + 2]);
+    if (s < 0.16 || l < 0.12 || l > 0.94) continue;
+    const b = Math.floor(h / 15) % 24;
+    buckets[b].s += Math.pow(s, 2) * (1 - Math.abs(l - 0.52));
+    buckets[b].n++;
+  }
+  return buckets.map((b, i) => ({ hue: i * 15 + 7.5, sc: b.s })).sort((a, b) => b.sc - a.sc);
+}
+
+function extractCoverColors(d) {
+  const ranked = getDominantHues(d);
+  if (ranked[0] && ranked[0].sc > 0) {
+    coverHue = Math.round(ranked[0].hue);
+    autoCover = `hsl(${coverHue} 100% 60%)`;
+    if (!hasBgPhoto) {
+      const second = ranked.find((r) => r.sc > 0 && Math.min(Math.abs(r.hue - coverHue), 360 - Math.abs(r.hue - coverHue)) > 45);
+      bgHue = second ? Math.round(second.hue) : (coverHue + 45) % 360;
+      autoBg = `hsl(${bgHue} 100% 60%)`;
+    }
+    applyColors();
+  }
+}
+
+function extractBgColors(img) {
+  try {
+    const c = document.createElement('canvas'); c.width = c.height = 36;
+    const x = c.getContext('2d'); x.drawImage(img, 0, 0, 36, 36);
+    const d = x.getImageData(0, 0, 36, 36).data;
+    const ranked = getDominantHues(d);
+    if (ranked[0] && ranked[0].sc > 0) {
+      hasBgPhoto = true;
+      let h = Math.round(ranked[0].hue);
+      const diff = Math.min(Math.abs(h - coverHue), 360 - Math.abs(h - coverHue));
+      if (diff < 30) {
+        const alt = ranked.find((r) => r.sc > 0 && Math.min(Math.abs(r.hue - coverHue), 360 - Math.abs(r.hue - coverHue)) >= 30);
+        if (alt) h = Math.round(alt.hue);
+        else h = (coverHue + 45) % 360;
+      }
+      bgHue = h;
+      autoBg = `hsl(${bgHue} 100% 60%)`;
+      applyColors();
+    }
+  } catch (e) {
+    console.warn('extractBgColors error', e);
+  }
+}
+
+function applyColors() {
+  const r = document.documentElement.style;
+  const c1 = S.accentAuto ? autoCover : S.accent1;
+  const c2 = S.accentAuto ? autoBg : S.accent2;
+  r.setProperty('--c1', c1);
+  r.setProperty('--c2', c2);
+  r.setProperty('--c1-rgb', hslToRgbStr(coverHue, 1, 0.6));
+  r.setProperty('--c2-rgb', hslToRgbStr(bgHue, 1, 0.6));
+  r.setProperty('--neon-glow', `color-mix(in srgb, ${c1} 50%, ${c2})`);
+  if (typeof pal !== 'undefined') pal.key = '';
+}
+
+function setCover(url) {
+  coverURL = url;
+  const h = history.find((x) => track && x.key === track.key);
+  $('cover').src = url || ''; $('c-cover').src = url || ''; $('np-cover').src = url || '';
+  if ($('v-sleeve-img')) $('v-sleeve-img').src = url || '';
+  if ($('v-label-img')) $('v-label-img').src = url || '';
+  $('bg-cover').style.backgroundImage = url ? `url(${url})` : '';
+  if (!url) return;
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    const c = document.createElement('canvas'); c.width = c.height = 36;
+    const x = c.getContext('2d'); x.drawImage(img, 0, 0, 36, 36);
+    extractCoverColors(x.getImageData(0, 0, 36, 36).data);
+    const t = document.createElement('canvas'); t.width = t.height = 120;
+    t.getContext('2d').drawImage(img, 0, 0, 120, 120);
+    if (h) {
+      h.cover = t.toDataURL('image/jpeg', .8);
+      renderQueue();
+      renderVinylRails();
+      try { localStorage.setItem('mv-history', JSON.stringify(history)); } catch (e) {}
+    }
+  };
+  img.src = url;
+}
+
+/* ----- file latérale classique ----- */
 function renderQueue() {
   const q = $('queue'); q.innerHTML = '';
   const items = history.slice(-S.queueCount).reverse();
   items.forEach((h) => {
     const d = document.createElement('div'); d.className = 'q' + (track && h.key === track.key ? ' now' : '');
     if (h.cover) d.style.backgroundImage = `url(${h.cover})`; else d.style.background = 'linear-gradient(135deg,#333,#111)';
-    d.title = h.key.replace('|', ' — ');
+    d.title = h.title ? `${h.title} — ${h.artist}` : h.key.replace('|', ' — ');
     q.appendChild(d);
   });
 }
 
-/* =================== CLIP YOUTUBE =================== */
-let clipKey = '', clipIds = [], clipIdx = 0, ytPort = 0;
-const ytFrame = $('bg-yt');
+/* ----- rails latéraux du Mode Vinyle (file d'attente à gauche et à droite) ----- */
+function renderVinylRails() {
+  const left = $('rail-left-list'), right = $('rail-right-list');
+  if (!left || !right) return;
+  left.innerHTML = ''; right.innerHTML = '';
+
+  const curKey = track ? track.key : '';
+  const curIdxInHist = history.findIndex((h) => h.key === curKey);
+  const prevItems = curIdxInHist > 0 ? history.slice(0, curIdxInHist).reverse() : history.filter((h) => h.key !== curKey).reverse();
+  const nextItems = curIdxInHist >= 0 ? history.slice(curIdxInHist + 1) : [];
+
+  // Rail gauche : Précédents
+  if (!prevItems.length) {
+    const emptyMsg = document.createElement('div');
+    emptyMsg.className = 'rail-empty';
+    emptyMsg.textContent = tr('Aucun morceau précédent');
+    left.appendChild(emptyMsg);
+  } else {
+    prevItems.slice(0, 5).forEach((h, idx) => {
+      const card = createRailCard(h, idx === 0 ? tr('Dernier joué') : `#${idx + 1}`, false);
+      card.onclick = () => api.cmd('prev');
+      left.appendChild(card);
+    });
+  }
+
+  // Rail droit : En cours et File d'attente / Récents
+  const queueItems = nextItems.length ? nextItems : history.slice(0, 6);
+  queueItems.forEach((h, idx) => {
+    const isNow = h.key === curKey;
+    const badgeText = isNow ? '● EN COURS' : `#${idx + 1}`;
+    const card = createRailCard(h, badgeText, isNow);
+    right.appendChild(card);
+  });
+}
+
+function createRailCard(h, badge, isNow) {
+  const card = document.createElement('div');
+  card.className = 'rail-card' + (isNow ? ' active-track' : '');
+  const coverDiv = document.createElement('div');
+  coverDiv.className = 'rail-cover';
+  if (h.cover) coverDiv.style.backgroundImage = `url(${h.cover})`;
+  else coverDiv.style.background = 'linear-gradient(135deg,#222,#111)';
+
+  const info = document.createElement('div');
+  info.className = 'rail-info';
+  const t = document.createElement('div');
+  t.className = 'rail-title-text';
+  t.textContent = h.title || h.key.split('|')[1] || h.key;
+  const a = document.createElement('div');
+  a.className = 'rail-artist-text';
+  a.textContent = h.artist || h.key.split('|')[0] || '';
+  const b = document.createElement('span');
+  b.className = 'rail-badge' + (isNow ? ' now' : '');
+  b.textContent = badge;
+
+  info.append(t, a, b);
+  card.append(coverDiv, info);
+  return card;
+}
+
+/* =================== CLIP OFFICIEL (Apple Music) + PHOTO ARTISTE (Deezer) =================== */
+// Aucun appel YouTube : le process principal interroge l'API iTunes (aperçu vidéo officiel du clip) et Deezer (photo de l'artiste).
+// Ordre de repli : clip officiel → photo artiste (travelling lent) → pochette floutée.
+let clipKey = '';
+const clipEl = $('bg-clip'), artistEl = $('bg-artist');
+clipEl.addEventListener('playing', () => { if (clipEl.getAttribute('src')) { body.classList.add('has-clip'); $('np-badge').textContent = tr('Clip officiel · Apple Music'); } });
+clipEl.addEventListener('error', () => { body.classList.remove('has-clip'); $('np-badge').textContent = ''; });
+function stopClip() {
+  clipKey = ''; clipEl.pause(); clipEl.removeAttribute('src'); clipEl.load();
+  artistEl.style.backgroundImage = ''; body.classList.remove('has-clip', 'has-artist'); $('np-badge').textContent = '';
+}
 async function ensureClip() {
   if (!track || clipKey === track.key) return;
-  clipKey = track.key; clipIds = []; clipIdx = 0;
-  ytFrame.src = 'about:blank';
-  const key = clipKey;
-  if (!ytPort) ytPort = await api.ytPort();
-  const ids = await api.ytSearch({ title: track.title, artist: track.artist, duration: track.dur });
-  if (clipKey !== key || S.bgMode !== 'youtube') return;
-  clipIds = ids; playClip();
+  stopClip();
+  const key = clipKey = track.key;
+  const v = await api.visuals({ key, title: track.title, artist: track.artist, duration: track.dur });
+  if (clipKey !== key || S.bgMode !== 'clip' || !v) return;
+  if (v.artist) {
+    const im = new Image();
+    im.crossOrigin = 'anonymous';
+    im.onload = () => {
+      if (clipKey === key) {
+        artistEl.style.backgroundImage = `url(${v.artist})`;
+        body.classList.add('has-artist');
+        extractBgColors(im);
+      }
+    };
+    im.src = v.artist;
+  }
+  if (v.clip) { clipEl.src = v.clip; clipEl.play().catch(() => {}); }
 }
-function playClip() {
-  if (clipIdx >= clipIds.length) { ytFrame.src = 'about:blank'; return; } // aucun clip lisible : on garde la pochette floutée
-  const start = Math.max(0, Math.floor((pos() - S.offset) / 1000 + S.clipDelay));
-  ytFrame.src = `http://127.0.0.1:${ytPort}/player.html?v=${clipIds[clipIdx]}&start=${start}`;
-}
-function stopClip() { clipKey = ''; ytFrame.src = 'about:blank'; }
-addEventListener('message', (e) => {
-  if (e.source !== ytFrame.contentWindow || !e.data) return;
-  if (e.data.type === 'yt-error') { clipIdx++; playClip(); } // clip non intégrable : on essaie le suivant
-});
 setInterval(() => {
-  if (S.bgMode === 'youtube' && clipKey && ytPort && ytFrame.src.startsWith('http'))
-    ytFrame.contentWindow.postMessage({ type: 'sync', t: Math.max(0, (pos() - S.offset) / 1000 + S.clipDelay), playing }, '*');
+  if (!clipEl.getAttribute('src')) return;
+  if (playing && clipEl.paused) clipEl.play().catch(() => {});
+  else if (!playing && !clipEl.paused) clipEl.pause();
 }, 1000);
 
 /* =================== PAROLES =================== */
@@ -287,12 +433,17 @@ async function loadLyrics(m) {
   const r = await api.lyrics({ title: m.title, artist: m.artist, album: m.album, duration: m.dur });
   if (!track || track.key !== key) return;
   if (r && r.synced) setLyrics(parseLRC(r.synced), true, '');
-  else if (r && r.plain) setLyrics(r.plain.split(/\r?\n/).map((t) => ({ t: 0, text: t.trim() })), false, tr('Paroles non synchronisées'));
+  else if (r && r.plain) { // pas de synchro : on répartit les lignes sur la durée (pondérée par la longueur) pour un défilement approximatif
+    const txt = r.plain.split(/\r?\n/).map((t) => t.trim()).filter(Boolean);
+    const total = m.dur || 180000, w = txt.map((t) => t.length + 14), sum = w.reduce((a, b) => a + b, 0);
+    let acc = total * .05;
+    setLyrics(txt.map((text, i) => { const o = { t: acc, text }; acc += (total * .88) * w[i] / sum; return o; }), true, tr('Paroles approximatives (non synchronisées)'), true);
+  }
   else setLyrics([], false, tr('Paroles introuvables pour ce titre'));
 }
-function setLyrics(lines, synced, status) {
-  lyrics = { lines, synced };
-  body.classList.toggle('plain', !synced);
+function setLyrics(lines, synced, status, approx = false) {
+  lyrics = { lines, synced, approx };
+  body.classList.toggle('plain', !synced); body.classList.toggle('approx', approx);
   $('lyrics-status').textContent = status;
   $('m-caption').textContent = '';
   const box = $('lyrics'); box.innerHTML = ''; lineEls = []; words = []; curIdx = -2;
@@ -323,7 +474,7 @@ function updateLyrics() {
     if (el) $('lyrics').style.transform = `translateY(${$('lyrics-mask').clientHeight / 2 - (el.offsetTop + el.offsetHeight / 2)}px)`;
     $('m-caption').textContent = idx >= 0 ? L[idx].text : '';
   }
-  if (idx >= 0) {
+  if (idx >= 0 && !lyrics.approx) {
     const next = L[idx + 1] ? L[idx + 1].t : L[idx].t + 4000;
     const text = L[idx].text || '♪';
     const span = Math.min(next - L[idx].t, text.length * 110 + 700);
@@ -377,11 +528,6 @@ function layout() {
 }
 addEventListener('resize', layout);
 
-let cache = { c1: '', c2: '' };
-function mix(t) {
-  const k = t < .5 ? t * 2 : (1 - t) * 2;
-  return `color-mix(in srgb, ${cache.c1} ${Math.round((1 - k) * 100)}%, ${cache.c2})`;
-}
 function spectrum(n, t) {
   const half = Math.ceil(n / 2);
   if (audioOK) {
@@ -400,46 +546,128 @@ function spectrum(n, t) {
     bass = playing ? .3 + .2 * Math.sin(t * 4) : 0;
   }
 }
+/* ----- palette (calculée une seule fois par changement de couleur : pas de color-mix par barre et par image) ----- */
+const TAU = Math.PI * 2, px = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+let pal = { key: '', a: [255, 94, 168], b: [255, 179, 71], cols: [] };
+const toRGB = (c) => { px.clearRect(0, 0, 1, 1); px.fillStyle = '#000'; px.fillStyle = c; px.fillRect(0, 0, 1, 1); const d = px.getImageData(0, 0, 1, 1).data; return [d[0], d[1], d[2]]; };
+const rgba = (c, a) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
+function palette(n) {
+  const cs = getComputedStyle(document.documentElement), c1 = cs.getPropertyValue('--c1').trim(), c2 = cs.getPropertyValue('--c2').trim();
+  const key = c1 + '|' + c2 + '|' + n;
+  if (pal.key === key) return;
+  pal.key = key; pal.a = toRGB(c1); pal.b = toRGB(c2); pal.cols = [];
+  for (let i = 0; i <= n; i++) {
+    const t = i / n, k = t < .5 ? t * 2 : (1 - t) * 2;
+    pal.cols.push([pal.a[0] + (pal.b[0] - pal.a[0]) * k, pal.a[1] + (pal.b[1] - pal.a[1]) * k, pal.a[2] + (pal.b[2] - pal.a[2]) * k]);
+  }
+}
+const parts = Array.from({ length: 80 }, () => ({ life: 0, a: 0, r: 0, v: 0, s: 1 }));
+let partIdx = 0;
+
+/* ----- mode visualiseur : « Aura » ----- */
 function draw(t) {
   g.setTransform(DPR, 0, 0, DPR, 0, 0); g.clearRect(0, 0, W, H);
-  const cs = getComputedStyle(document.documentElement);
-  cache.c1 = cs.getPropertyValue('--c1'); cache.c2 = cs.getPropertyValue('--c2');
-  const n = S.bars, half = Math.ceil(n / 2);
+  const n = S.bars, half = Math.ceil(n / 2); palette(n);
   spectrum(n, t / 1000);
-  const maxLen = R * 0.9, gap = 14 + bass * 10;
-  g.lineCap = 'round';
-  g.save(); g.translate(CX, CY); g.rotate(rot); rot += 0.0008 + bass * 0.004;
-  // anneau lumineux
-  g.save(); g.shadowBlur = 40 * S.glow / 100; g.shadowColor = cache.c1; g.strokeStyle = cache.c1;
-  g.globalAlpha = Math.min(1, .5 * (.4 + bass)); g.lineWidth = 3;
-  g.beginPath(); g.arc(0, 0, R + gap - 6, 0, 7); g.stroke(); g.restore();
-  const pts = [];
+  const glow = S.glow / 100, gap = 22 + bass * 14, maxLen = R * 0.85, A = pal.a, B = pal.b;
+  g.save(); g.translate(CX, CY);
+  g.globalCompositeOperation = 'lighter';
+  // aura diffuse qui pulse avec les basses
+  const ar = R * (2.2 + bass * 1);
+  const grd = g.createRadialGradient(0, 0, R * .7, 0, 0, ar);
+  grd.addColorStop(0, rgba(A, Math.min(.5, .26 * glow * (.6 + bass)))); grd.addColorStop(.55, rgba(B, .09 * glow)); grd.addColorStop(1, rgba(B, 0));
+  g.fillStyle = grd; g.beginPath(); g.arc(0, 0, ar, 0, TAU); g.fill();
+  // anneau fin + anneau pointillé en contre-rotation
+  g.lineWidth = 1.5; g.strokeStyle = rgba(A, .4); g.beginPath(); g.arc(0, 0, R + 10, 0, TAU); g.stroke();
+  g.save(); g.rotate(-rot * 1.6); g.setLineDash([1.5, 13]); g.lineCap = 'round'; g.lineWidth = 3; g.strokeStyle = rgba(B, .55);
+  g.beginPath(); g.arc(0, 0, R + gap + maxLen + 30, 0, TAU); g.stroke(); g.restore();
+  // blob de forme d'onde, lisse, collé à la pochette
+  g.save(); g.rotate(-rot * .5);
+  const bp = [];
+  for (let i = 0; i < 64; i++) { const idx = Math.min(half - 1, Math.floor((i < 32 ? i : 63 - i) / 32 * half)); const a = i / 64 * TAU; const rr = R + 10 + Math.min(1.2, vals[idx]) * 16; bp.push([Math.cos(a) * rr, Math.sin(a) * rr]); }
+  g.beginPath(); g.moveTo((bp[63][0] + bp[0][0]) / 2, (bp[63][1] + bp[0][1]) / 2);
+  for (let i = 0; i < 64; i++) { const p = bp[i], q = bp[(i + 1) % 64]; g.quadraticCurveTo(p[0], p[1], (p[0] + q[0]) / 2, (p[1] + q[1]) / 2); }
+  g.closePath(); g.fillStyle = rgba(A, .07 * glow + .02); g.fill(); g.lineWidth = 2; g.strokeStyle = rgba(B, .7); g.stroke(); g.restore();
+  // barres / courbe / points
+  g.save(); g.rotate(rot); rot += 0.0008 + bass * 0.004; g.lineCap = 'round';
+  const bw = Math.max(2, (TAU * (R + gap)) / n * .5), pts = [];
   for (let i = 0; i < n; i++) {
-    const idx = i < half ? i : n - 1 - i;          // miroir gauche / droite
-    const a = (i / n) * Math.PI * 2 - Math.PI / 2;
-    const len = 4 + Math.min(1.3, vals[idx]) * maxLen;
-    const x0 = Math.cos(a) * (R + gap), y0 = Math.sin(a) * (R + gap);
-    const x1 = Math.cos(a) * (R + gap + len), y1 = Math.sin(a) * (R + gap + len);
-    const col = mix(i / n);
+    const idx = i < half ? i : n - 1 - i;                 // miroir gauche / droite
+    const a = (i / n) * TAU - Math.PI / 2, ca = Math.cos(a), sa = Math.sin(a);
+    const v = Math.min(1.3, vals[idx]), len = 4 + v * maxLen, c = pal.cols[i];
+    const x0 = ca * (R + gap), y0 = sa * (R + gap), x1 = ca * (R + gap + len), y1 = sa * (R + gap + len);
     if (S.barStyle === 'bars') {
-      g.strokeStyle = col; g.lineWidth = Math.max(2, (2 * Math.PI * (R + gap)) / n * .55);
-      g.shadowColor = col; g.shadowBlur = 10 * S.glow / 100;
-      g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+      if (glow > .05) { g.strokeStyle = rgba(c, .13 * glow); g.lineWidth = bw * 3; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke(); }
+      g.strokeStyle = rgba(c, .55 + v * .45); g.lineWidth = bw; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
     } else if (S.barStyle === 'dots') {
-      g.fillStyle = col; g.shadowColor = col; g.shadowBlur = 12 * S.glow / 100;
-      g.beginPath(); g.arc(x1, y1, 2 + vals[idx] * 5, 0, 7); g.fill();
+      if (glow > .05) { g.fillStyle = rgba(c, .15 * glow); g.beginPath(); g.arc(x1, y1, 7 + v * 10, 0, TAU); g.fill(); }
+      g.fillStyle = rgba(c, .95); g.beginPath(); g.arc(x1, y1, 2 + v * 5, 0, TAU); g.fill();
     } else pts.push([x1, y1]);
+    if (v > .55 && bass > .3 && Math.random() < .06) { const p = parts[partIdx++ % parts.length]; p.life = 1; p.a = a + rot; p.r = R + gap + len; p.v = .6 + Math.random() * 1.6; p.s = 1 + Math.random() * 2.2; p.c = c; }
   }
   if (S.barStyle === 'line' && pts.length) {
-    g.shadowColor = cache.c1; g.shadowBlur = 16 * S.glow / 100; g.lineWidth = 3; g.lineJoin = 'round';
-    const gr = g.createLinearGradient(-R, 0, R, 0); gr.addColorStop(0, cache.c1); gr.addColorStop(.5, cache.c2); gr.addColorStop(1, cache.c1);
-    g.strokeStyle = gr; g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); g.stroke();
+    g.lineJoin = 'round'; g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath();
+    if (glow > .05) { g.strokeStyle = rgba(A, .2 * glow); g.lineWidth = 10; g.stroke(); }
+    const gr = g.createLinearGradient(-R, 0, R, 0); gr.addColorStop(0, rgba(A, 1)); gr.addColorStop(.5, rgba(B, 1)); gr.addColorStop(1, rgba(A, 1));
+    g.strokeStyle = gr; g.lineWidth = 3; g.stroke();
+  }
+  g.restore();
+  // particules qui s'échappent sur les pics
+  for (const p of parts) {
+    if (p.life <= 0) continue;
+    p.life -= .014; p.r += p.v * (1 + bass * 3);
+    g.fillStyle = rgba(p.c, Math.max(0, p.life) * .8);
+    g.beginPath(); g.arc(Math.cos(p.a) * p.r, Math.sin(p.a) * p.r, p.s, 0, TAU); g.fill();
   }
   g.restore();
   // pulsation de la pochette et du halo
-  const s = 1 + bass * 0.06 * (S.sens / 100);
-  $('cover-wrap').style.transform = `translate(-50%,-50%) scale(${s})`;
-  $('halo').style.opacity = Math.min(1, (.35 + bass * .9) * S.glow / 100);
+  const sc = 1 + bass * 0.06 * (S.sens / 100);
+  $('cover-wrap').style.transform = `translate(-50%,-50%) scale(${sc})`;
+  $('halo').style.opacity = Math.min(1, (.25 + bass * .8) * glow);
+}
+
+/* ----- mode paroles : spectre discret en bas d'écran ----- */
+/* ----- mode vinyle : pulsation néon sous la platine et bras vibrant ----- */
+function drawVinylFx(t) {
+  g.setTransform(DPR, 0, 0, DPR, 0, 0); g.clearRect(0, 0, W, H);
+  if (audioOK) {
+    analyser.getByteFrequencyData(freq);
+    let bs = 0; for (let k = 1; k < 8; k++) bs += freq[k];
+    bass = bass * .6 + (bs / 7 / 255) * .4;
+  } else {
+    bass = playing ? .3 + .2 * Math.sin(t * 4 / 1000) : 0;
+  }
+  const glow = S.glow / 100;
+  const vGlow = $('vinyl-platter-glow');
+  if (vGlow) {
+    const sc = 1 + bass * 0.16 * (S.sens / 100);
+    const op = Math.min(1, (.55 + bass * .7) * glow);
+    vGlow.style.transform = `translate(-50%, -50%) scale(${sc})`;
+    vGlow.style.opacity = op;
+  }
+  $('halo').style.opacity = Math.min(1, (.35 + bass * .85) * glow);
+  const vArm = $('vinyl-arm');
+  if (vArm && playing) {
+    const jitter = (Math.sin(t * 0.05) * bass * 1.5).toFixed(2);
+    vArm.style.transform = `rotate(calc(var(--arm-deg, 26deg) + ${jitter}deg))`;
+  }
+}
+
+function drawLyricsFx(t) {
+  g.setTransform(DPR, 0, 0, DPR, 0, 0); g.clearRect(0, 0, W, H);
+  if (!audioOK && !playing) return;
+  const n = 72, half = Math.ceil(n / 2), glow = S.glow / 100; palette(n);
+  spectrum(n, t / 1000);
+  g.globalCompositeOperation = 'lighter';
+  const bw = W / n;
+  for (let i = 0; i < n; i++) {
+    const idx = Math.min(half - 1, Math.floor(Math.abs(i - (n - 1) / 2)));   // graves au centre
+    const h = 3 + Math.min(1.3, vals[idx]) * H * .13, c = pal.cols[i];
+    g.fillStyle = rgba(c, .16 + .3 * glow); g.fillRect(i * bw + bw * .2, H - h, bw * .6, h);
+    g.fillStyle = rgba(c, .5 * glow + .1); g.fillRect(i * bw + bw * .2, H - h, bw * .6, 2);
+  }
+  $('np-cover-wrap').style.transform = `scale(${1 + bass * .035})`;
+  $('halo').style.opacity = Math.min(1, (.25 + bass * .8) * glow);
 }
 
 /* =================== BOUCLE PRINCIPALE =================== */
@@ -448,8 +676,7 @@ function frame(t) {
   requestAnimationFrame(frame);
   if (document.hidden || body.classList.contains('no-media')) return;
   if (t - last < 1000 / S.fps - 1) return; last = t;
-  if (S.mode === 'visualizer') draw(t);
-  else { if (audioOK) { analyser.getByteFrequencyData(freq); let bs = 0; for (let k = 1; k < 8; k++) bs += freq[k]; bass = bass * .6 + (bs / 7 / 255) * .4; $('halo').style.opacity = Math.min(1, (.35 + bass * .9) * S.glow / 100); } }
+  if (S.mode === 'visualizer') draw(t); else if (S.mode === 'lyrics') drawLyricsFx(t); else if (S.mode === 'vinyl') drawVinylFx(t);
   updateLyrics();
   if (track && track.dur) {
     const p = Math.min(track.dur, Math.max(0, pos() - S.offset));
@@ -467,7 +694,14 @@ setInterval(tickClock, 1000);
 
 /* =================== INTERACTIONS =================== */
 const toggleSettings = () => body.classList.toggle('settings-open');
-const toggleMode = () => { S.mode = S.mode === 'visualizer' ? 'lyrics' : 'visualizer'; applySettings(); buildSettings(); curIdx = -2; };
+const toggleMode = () => {
+  const modes = ['visualizer', 'lyrics', 'vinyl'];
+  const nextIdx = (modes.indexOf(S.mode) + 1) % modes.length;
+  S.mode = modes[nextIdx];
+  applySettings();
+  buildSettings();
+  curIdx = -2;
+};
 $('b-prev').onclick = () => api.cmd('prev');
 $('b-next').onclick = () => api.cmd('next');
 $('b-play').onclick = () => api.cmd('toggle');
@@ -502,10 +736,11 @@ function wizStep(n) {
     h('div', 'sub', tr('Choisis ton mode. Tu pourras en changer à tout moment avec la touche M.'));
     const cards = h('div', 'wz-cards');
     [['visualizer', '🎵', 'Visualiseur circulaire', 'Pochette ronde qui tourne, barres audio réactives au son, halo lumineux.'],
-     ['lyrics', '🎤', 'Paroles + clip', 'Paroles synchronisées en grand, mot par mot, avec un clip ou une image en fond.']].forEach(([k, ic, t, d]) => {
+     ['lyrics', '🎤', 'Paroles + clip', 'Paroles synchronisées en grand, mot par mot, avec un clip ou une image en fond.'],
+     ['vinyl', '💿', 'Vinyle & file d\'attente', 'Disque vinyle 33 tours réaliste, platine animée et pochettes de la file d\'attente sur les côtés.']].forEach(([k, ic, t, d]) => {
       const c = document.createElement('div'); c.className = 'wz-card' + (S.mode === k ? ' sel' : '');
       c.innerHTML = `<div class="ic">${ic}</div><h3>${tr(t)}</h3><p>${tr(d)}</p>`;
-      c.onclick = () => { S.mode = k; if (k === 'lyrics' && S.bgMode === 'cover') S.bgMode = 'youtube'; wizStep(2); };
+      c.onclick = () => { S.mode = k; if (k === 'lyrics' && S.bgMode === 'cover') S.bgMode = 'clip'; wizStep(2); };
       cards.appendChild(c);
     });
     const a = h('div', 'wz-actions'); const sk = document.createElement('button'); sk.className = 'wz-btn ghost'; sk.textContent = tr('Passer (garder mes réglages)'); sk.onclick = closeWizard; a.appendChild(sk);
@@ -522,7 +757,7 @@ function wizStep(n) {
     });
     const r = document.createElement('div'); r.className = 'row'; r.innerHTML = '<label>' + tr('Fond') + '</label>';
     const sel = document.createElement('select');
-    for (const [k, t] of Object.entries({ cover: 'Pochette floutée', youtube: 'Clip YouTube (auto)', aurora: 'Aurore animée', custom: 'Mon fichier (vidéo / image)…', black: 'Noir' })) { const o = document.createElement('option'); o.value = k; o.textContent = tr(t); sel.appendChild(o); }
+    for (const [k, t] of Object.entries({ clip: 'Clip officiel / photo artiste (auto)', cover: 'Pochette floutée', aurora: 'Aurore animée', custom: 'Mon fichier (vidéo / image)…', black: 'Noir' })) { const o = document.createElement('option'); o.value = k; o.textContent = tr(t); sel.appendChild(o); }
     sel.value = S.bgMode;
     sel.onchange = async () => { S.bgMode = sel.value; if (sel.value === 'custom') { const p = await api.pickFile(); if (p) S.bgFile = p; else { S.bgMode = 'cover'; sel.value = 'cover'; } } };
     r.appendChild(sel); grid.appendChild(r);
@@ -534,7 +769,17 @@ function wizStep(n) {
     ask.append(c, document.createTextNode(tr('Ne plus me demander au démarrage')));
   }
 }
+/* =================== TEXTURE (grain de film, statique = gratuit pour le GPU) =================== */
+(() => {
+  const c = document.createElement('canvas'); c.width = c.height = 160; const x = c.getContext('2d'), d = x.createImageData(160, 160);
+  for (let i = 0; i < d.data.length; i += 4) { const v = Math.random() * 255; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; }
+  x.putImageData(d, 0, 0); $('bg-grain').style.backgroundImage = `url(${c.toDataURL()})`;
+})();
 /* =================== DÉMARRAGE =================== */
+try {
+  const savedHist = JSON.parse(localStorage.getItem('mv-history') || '[]');
+  if (Array.isArray(savedHist) && savedHist.length) history = savedHist;
+} catch (e) {}
 body.classList.add('no-media');
 applyStatic(); buildSettings(); applySettings(); wake();
 if (S.askAtStart) openWizard();
